@@ -180,13 +180,6 @@
     `;
   }
 
-  function renderPublicUsers(state, labFilter, dayFilter) {
-    const users = publicUsers(state, labFilter, dayFilter);
-    $("#public-users").innerHTML = users.length
-      ? users.map((user) => `<span class="user-chip"><strong>${escapeHtml(user.name)}</strong> | ${escapeHtml(roleLabel(user.role))}</span>`).join("")
-      : empty("Nenhum usuário vinculado ao filtro atual.");
-  }
-
   function renderBoard(state, labFilter, dayFilter) {
     const desks = occupiedDesks(state, labFilter, dayFilter);
     if (!desks.length) {
@@ -285,7 +278,6 @@
     $("#dashboard-day-filter").innerHTML = dayOptions(dayFilter);
     renderInsight(state, labFilter, dayFilter);
     renderMetrics(state);
-    renderPublicUsers(state, labFilter, dayFilter);
     renderBoard(state, labFilter, dayFilter);
     applyDynamicStyles();
   }
