@@ -107,6 +107,16 @@
       .filter((lab) => visibleDesks(state, lab.id).length);
   }
 
+  function occupiedDesks(state, labFilter, dayFilter) {
+    return visibleDesks(state, labFilter)
+      .filter((desk) => reservationsForDesk(state, desk.id, dayFilter).length);
+  }
+
+  function visibleOccupiedLabs(state, labFilter, dayFilter) {
+    return visibleLabs(state, labFilter)
+      .filter((lab) => occupiedDesks(state, lab.id, dayFilter).length);
+  }
+
   function labOccupancy(state, labId) {
     const desks = state.desks.filter((desk) => desk.labId === labId);
     const capacity = desks.length * reservationDays.length * reservationSlots;
@@ -134,7 +144,7 @@
         .filter((reservation) => (labFilter === "all" || reservation.labId === labFilter) && (dayFilter === "all" || reservation.day === dayFilter))
         .map((reservation) => reservation.deskId)
     );
-    const users = publicUsers(state, labFilter);
+    const users = publicUsers(state, labFilter, dayFilter);
     const labName = labFilter === "all" ? "Todos os laboratorios" : getLab(state, labFilter)?.name || "Laboratorio";
     const dayName = dayFilter === "all" ? "Todos os dias" : dayFilter;
 
@@ -147,10 +157,10 @@
     };
   }
 
-  function publicUsers(state, labFilter) {
+  function publicUsers(state, labFilter, dayFilter = "all") {
     const userIds = new Set(
       state.reservations
-        .filter((reservation) => labFilter === "all" || reservation.labId === labFilter)
+        .filter((reservation) => (labFilter === "all" || reservation.labId === labFilter) && (dayFilter === "all" || reservation.day === dayFilter))
         .map((reservation) => reservation.userId)
     );
     return sortByName(state.users.filter((user) => userIds.has(user.id)));
@@ -177,17 +187,17 @@
     `;
   }
 
-  function renderPublicUsers(state, labFilter) {
-    const users = publicUsers(state, labFilter);
+  function renderPublicUsers(state, labFilter, dayFilter) {
+    const users = publicUsers(state, labFilter, dayFilter);
     $("#public-users").innerHTML = users.length
       ? users.map((user) => `<span class="user-chip"><strong>${escapeHtml(user.name)}</strong> | ${escapeHtml(roleLabel(user.role))}</span>`).join("")
       : empty("Nenhum usuario vinculado ao filtro atual.");
   }
 
   function renderBoard(state, labFilter, dayFilter) {
-    const desks = visibleDesks(state, labFilter);
+    const desks = occupiedDesks(state, labFilter, dayFilter);
     if (!desks.length) {
-      $("#public-board").innerHTML = empty("Nenhuma mesa disponivel para o filtro atual.");
+      $("#public-board").innerHTML = empty("Nenhuma mesa ocupada para o filtro atual.");
       return;
     }
 
@@ -235,8 +245,8 @@
       </article>`;
     };
 
-    $("#public-board").innerHTML = visibleLabs(state, labFilter).map((lab) => {
-      const labDesks = visibleDesks(state, lab.id);
+    $("#public-board").innerHTML = visibleOccupiedLabs(state, labFilter, dayFilter).map((lab) => {
+      const labDesks = occupiedDesks(state, lab.id, dayFilter);
       const occupancy = labOccupancy(state, lab.id);
       const collapsed = collapsedLabs.has(lab.id);
       return `<section class="lab-section lab-card ${collapsed ? "collapsed" : ""}" data-lab-section="${escapeHtml(lab.id)}">
@@ -247,7 +257,7 @@
           </div>
           <div class="lab-section-status">
             <strong>${occupancy.percent}% ocupado</strong>
-            <span>${labDesks.length} mesa(s)</span>
+            <span>${labDesks.length} mesa(s) ocupada(s)</span>
             ${occupancyBar(occupancy.percent)}
             <button class="button ghost lab-toggle" type="button" data-toggle-lab="${escapeHtml(lab.id)}" aria-expanded="${collapsed ? "false" : "true"}">
               ${collapsed ? "Expandir" : "Contrair"}
@@ -270,7 +280,7 @@
     $("#dashboard-day-filter").innerHTML = dayOptions(dayFilter);
     renderInsight(state, labFilter, dayFilter);
     renderMetrics(state);
-    renderPublicUsers(state, labFilter);
+    renderPublicUsers(state, labFilter, dayFilter);
     renderBoard(state, labFilter, dayFilter);
     applyDynamicStyles();
   }

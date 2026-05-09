@@ -194,6 +194,46 @@ select {
   gap: 8px;
 }
 
+.nav-group {
+  display: grid;
+  gap: 8px;
+}
+
+.nav-group-title {
+  color: #b9c5b6;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 10px 12px 2px;
+  text-transform: uppercase;
+}
+
+.nav-sublist {
+  display: grid;
+  gap: 6px;
+  padding-left: 10px;
+}
+
+.nav-nested {
+  display: grid;
+  gap: 6px;
+}
+
+.nav-child {
+  margin-left: 14px;
+  position: relative;
+}
+
+.nav-child::before {
+  background: #56675d;
+  content: "";
+  height: 1px;
+  left: -10px;
+  position: absolute;
+  top: 50%;
+  width: 8px;
+}
+
 .nav-item {
   border: 0;
   border-radius: 8px;
@@ -860,8 +900,29 @@ select:focus {
   }
 
   .nav-list {
-    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
     overflow-x: auto;
+  }
+
+  .nav-group {
+    min-width: 360px;
+  }
+
+  .nav-sublist {
+    grid-template-columns: repeat(3, minmax(110px, 1fr));
+    padding-left: 0;
+  }
+
+  .nav-nested {
+    grid-template-columns: repeat(2, minmax(110px, 1fr));
+  }
+
+  .nav-child {
+    margin-left: 0;
+  }
+
+  .nav-child::before {
+    display: none;
   }
 
   .sidebar-footer {

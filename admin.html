@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://qbnxsssutkuiitqishel.supabase.co; img-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://awoyslrpmbygibyvjnpb.supabase.co; img-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
     <meta name="referrer" content="no-referrer">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
     <title>LabCon | Controle de Laboratorios</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
   </head>
   <body>
     <div class="app-shell">
@@ -24,9 +24,16 @@
         <nav class="nav-list">
           <button class="nav-item active" type="button" data-view="dashboard">Painel publico</button>
           <button class="nav-item" type="button" data-view="reservations">Reservas</button>
-          <button class="nav-item" type="button" data-view="users">Usuarios</button>
-          <button class="nav-item" type="button" data-view="labs">Laboratorios</button>
-          <button class="nav-item" type="button" data-view="desks">Mesas</button>
+          <div class="nav-group">
+            <div class="nav-group-title">Cadastro</div>
+            <div class="nav-sublist">
+              <button class="nav-item" type="button" data-view="users">Usuarios</button>
+              <div class="nav-nested">
+                <button class="nav-item" type="button" data-view="labs">Laboratorios</button>
+                <button class="nav-item nav-child" type="button" data-view="desks">Mesas</button>
+              </div>
+            </div>
+          </div>
         </nav>
 
         <div class="sidebar-footer">
@@ -179,6 +186,10 @@
                 <label for="student-advisor">Orientador</label>
                 <select id="student-advisor"></select>
               </div>
+              <div class="field student-only">
+                <label for="student-research-project">Projeto de Pesquisa</label>
+                <input id="student-research-project" type="text" maxlength="160">
+              </div>
               <div class="form-actions">
                 <button class="button primary" type="submit">Salvar usuario</button>
                 <button class="button ghost" type="button" data-reset="user-form">Cancelar</button>
@@ -248,7 +259,7 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.4/dist/umd/supabase.js" integrity="sha384-7SfFUrg31wOnGWBLLniKFCNmCSguYA5wI1WPDOt7kP/mom4R9/0pwghVEnv0uwYP" crossorigin="anonymous"></script>
-    <script src="supabase.js"></script>
-    <script src="app.js"></script>
+    <script src="src/supabase.js"></script>
+    <script src="src/app.js"></script>
   </body>
 </html>

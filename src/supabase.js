@@ -1,11 +1,17 @@
 (function () {
   "use strict";
 
-  const supabaseUrl = "https://qbnxsssutkuiitqishel.supabase.co";
-  const supabaseKey = "sb_publishable_liCRlozF3LjJHIOAfbAB-Q_p4XSwngB";
+  const supabaseUrl = "https://awoyslrpmbygibyvjnpb.supabase.co";
+  const supabaseKey = "sb_publishable_q5d521VBU6AoreWCQZtnFg_JXdTpGEc";
   const stateTable = "labcon_state";
   const stateId = "default";
   const allowedRoles = new Set(["aluno", "professor", "tecnico", "administrador"]);
+  const emptyState = {
+    users: [],
+    labs: [],
+    desks: [],
+    reservations: []
+  };
 
   const client = window.supabase?.createClient(supabaseUrl, supabaseKey, {
     auth: {
@@ -71,6 +77,35 @@
         }, { onConflict: "id" });
 
       if (error) throw error;
+    },
+
+    async upsertUserFromAuth(authUser) {
+      if (!authUser) return null;
+      const metadata = authUser.user_metadata || {};
+      const role = normalizeRole(metadata.role);
+      const user = {
+        id: `auth-${authUser.id}`,
+        authUserId: authUser.id,
+        email: authUser.email,
+        name: metadata.name || authUser.email?.split("@")[0] || "Usuario",
+        role,
+        advisorId: role === "aluno" ? metadata.advisorId || "" : "",
+        advisorName: role === "aluno" ? metadata.advisorName || "" : "",
+        source: "auth"
+      };
+      const state = await this.loadState({ ...emptyState });
+      const users = Array.isArray(state.users) ? state.users : [];
+      const index = users.findIndex((entry) => {
+        return entry.authUserId === user.authUserId || entry.email === user.email || entry.id === user.id;
+      });
+      const nextUsers = [...users];
+      if (index >= 0) nextUsers[index] = { ...nextUsers[index], ...user };
+      else nextUsers.push(user);
+
+      const nextState = { ...emptyState, ...state, users: nextUsers };
+      await this.saveState(nextState);
+      localStorage.setItem("labcon-state-v1", JSON.stringify(nextState));
+      return user;
     }
   };
 }());

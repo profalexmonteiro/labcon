@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://qbnxsssutkuiitqishel.supabase.co; img-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://awoyslrpmbygibyvjnpb.supabase.co; img-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
     <meta name="referrer" content="no-referrer">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
     <title>LabCon | Login</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
   </head>
   <body>
     <main class="auth-page">
@@ -57,6 +57,18 @@
             <input id="register-email" type="email" required autocomplete="email" maxlength="254">
           </div>
           <div class="field">
+            <label for="register-role">Perfil</label>
+            <select id="register-role" required>
+              <option value="aluno">Aluno</option>
+              <option value="professor">Professor</option>
+              <option value="tecnico">Tecnico</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="register-advisor">Orientador</label>
+            <select id="register-advisor" required></select>
+          </div>
+          <div class="field">
             <label for="register-password">Senha</label>
             <input id="register-password" type="password" required autocomplete="new-password" minlength="8" maxlength="128">
           </div>
@@ -83,7 +95,7 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.4/dist/umd/supabase.js" integrity="sha384-7SfFUrg31wOnGWBLLniKFCNmCSguYA5wI1WPDOt7kP/mom4R9/0pwghVEnv0uwYP" crossorigin="anonymous"></script>
-    <script src="supabase.js"></script>
-    <script src="login.js"></script>
+    <script src="src/supabase.js"></script>
+    <script src="src/login.js"></script>
   </body>
 </html>

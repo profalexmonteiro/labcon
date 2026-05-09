@@ -230,6 +230,16 @@
         .filter((lab) => Domain.visibleDesks(state, lab.id).length);
     },
 
+    occupiedDesks(state, labFilter, dayFilter) {
+      return Domain.visibleDesks(state, labFilter)
+        .filter((desk) => Domain.reservationsForDesk(state, desk.id, dayFilter).length);
+    },
+
+    visibleOccupiedLabs(state, labFilter, dayFilter) {
+      return Domain.visibleLabs(state, labFilter)
+        .filter((lab) => Domain.occupiedDesks(state, lab.id, dayFilter).length);
+    },
+
     labOccupancy(state, labId) {
       const desks = state.desks.filter((desk) => desk.labId === labId);
       const capacity = desks.length * Config.reservationDays.length * Config.reservationSlots.length;
@@ -244,10 +254,10 @@
         .sort((a, b) => Config.days.indexOf(a.day) - Config.days.indexOf(b.day) || a.start.localeCompare(b.start));
     },
 
-    publicUsers(state, labFilter) {
+    publicUsers(state, labFilter, dayFilter = "all") {
       const userIds = new Set(
         state.reservations
-          .filter((reservation) => labFilter === "all" || reservation.labId === labFilter)
+          .filter((reservation) => (labFilter === "all" || reservation.labId === labFilter) && (dayFilter === "all" || reservation.day === dayFilter))
           .map((reservation) => reservation.userId)
       );
       return Utils.sortByName(state.users.filter((user) => userIds.has(user.id)));
@@ -509,7 +519,8 @@
           user.course,
           user.program,
           user.postgradType,
-          advisor ? `Orientador: ${advisor}` : ""
+          advisor ? `Orientador: ${advisor}` : "",
+          user.researchProject ? `Projeto: ${user.researchProject}` : ""
         ].filter(Boolean);
         return Templates.listRow(user.name, details, "user", user.id);
       }).join("");
@@ -578,17 +589,19 @@
     renderDashboard(state) {
       const labFilter = this.els.publicLabFilter.value || "all";
       const dayFilter = this.els.dashboardDayFilter.value || "all";
-      const desks = Domain.visibleDesks(state, labFilter);
-      const publicUsers = Domain.publicUsers(state, labFilter);
+      const desks = Domain.occupiedDesks(state, labFilter, dayFilter);
+      const publicUsers = Domain.publicUsers(state, labFilter, dayFilter);
 
       this.els.publicUsers.innerHTML = Templates.publicUsers(publicUsers);
 
       if (!desks.length) {
-        this.els.publicBoard.innerHTML = Templates.empty("Nenhuma mesa disponivel para o filtro atual.");
+        this.els.publicBoard.innerHTML = Templates.empty("Nenhuma mesa ocupada para o filtro atual.");
         return;
       }
 
-      this.els.publicBoard.innerHTML = Domain.visibleLabs(state, labFilter).map((lab) => Templates.labSection(state, lab, dayFilter)).join("");
+      this.els.publicBoard.innerHTML = Domain.visibleOccupiedLabs(state, labFilter, dayFilter)
+        .map((lab) => Templates.labSection(state, lab, dayFilter, Domain.occupiedDesks(state, lab.id, dayFilter)))
+        .join("");
     },
 
     showView(view) {
@@ -754,8 +767,7 @@
       }).join("");
     },
 
-    labSection(state, lab, dayFilter) {
-      const desks = Domain.visibleDesks(state, lab.id);
+    labSection(state, lab, dayFilter, desks = Domain.visibleDesks(state, lab.id)) {
       const occupancy = Domain.labOccupancy(state, lab.id);
       const collapsed = collapsedLabs.has(lab.id);
       return `<section class="lab-section lab-card ${collapsed ? "collapsed" : ""}" data-lab-section="${Utils.escapeHtml(lab.id)}">
@@ -766,7 +778,7 @@
           </div>
           <div class="lab-section-status">
             <strong>${occupancy.percent}% ocupado</strong>
-            <span>${desks.length} mesa(s)</span>
+            <span>${desks.length} mesa(s) ocupada(s)</span>
             ${Templates.occupancyBar(occupancy.percent)}
             <button class="button ghost lab-toggle" type="button" data-toggle-lab="${Utils.escapeHtml(lab.id)}" aria-expanded="${collapsed ? "false" : "true"}">
               ${collapsed ? "Expandir" : "Contrair"}
@@ -820,6 +832,11 @@
       const allowed = this.allowedViews();
       $$(".nav-item").forEach((item) => {
         item.classList.toggle("hidden", !allowed.includes(item.dataset.view));
+      });
+      $$(".nav-group").forEach((group) => {
+        const visibleItems = Array.from(group.querySelectorAll(".nav-item"))
+          .filter((item) => !item.classList.contains("hidden"));
+        group.classList.toggle("hidden", !visibleItems.length);
       });
       $("#seed-data").classList.toggle("hidden", role === "aluno");
       $("#clear-data").classList.toggle("hidden", role === "aluno");
@@ -932,6 +949,7 @@
       if (role === "aluno") {
         user.level = $("#student-level").value;
         user.advisorId = $("#student-advisor").value;
+        user.researchProject = $("#student-research-project").value.trim();
         if (user.level === "graduacao") {
           user.course = $("#student-course").value;
           user.program = $("#student-program").value;
@@ -1059,6 +1077,7 @@
       $("#student-program").value = user.program || "PIBIC";
       $("#postgrad-type").value = user.postgradType || "Mestrado";
       $("#student-advisor").value = user.advisorId || "";
+      $("#student-research-project").value = user.researchProject || "";
       View.updateStudentFields();
     },
 

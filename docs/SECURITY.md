@@ -5,6 +5,7 @@
 - A area administrativa exige sessao ativa do Supabase Auth.
 - O perfil de acesso nao e mais escolhido no login; ele vem de `app_metadata.role` ou `user_metadata.role`.
 - A escrita no Supabase exige sessao autenticada no cliente e policy `authenticated` no banco.
+- Cadastros feitos no Supabase Auth sao sincronizados para `labcon_state.users` por trigger `security definer`, mantendo o painel administrativo com os mesmos dados do Auth.
 - O painel publico permanece somente leitura.
 - Scripts externos usam versao fixa e SRI.
 - As paginas declaram CSP, Referrer Policy, Permissions Policy e `nosniff`.
@@ -25,11 +26,11 @@ Usuarios sem papel reconhecido entram como `aluno`.
 
 Nao mantenha credenciais padrao como `admin/admin` em uma aplicacao web publicada. Isso cria uma conta previsivel e facil de explorar.
 
-Para criar o administrador inicial, use o arquivo `supabase-admin-bootstrap.sql`:
+Para criar o administrador inicial, use o arquivo `database/supabase-admin-bootstrap.sql`:
 
 1. Crie um usuario em Supabase Auth pelo painel.
 2. Use uma senha temporaria forte.
-3. Execute `supabase-admin-bootstrap.sql` para marcar esse usuario como `administrador`.
+3. Execute `database/supabase-admin-bootstrap.sql` para marcar esse usuario como `administrador`.
 4. Troque a senha antes de publicar o sistema.
 
 ## Limitacao atual
