@@ -59,7 +59,7 @@ begin
     'id', 'auth-' || new.id::text,
     'authUserId', new.id::text,
     'email', new.email,
-    'name', coalesce(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1), 'Usuario'),
+    'name', coalesce(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1), 'Usuário'),
     'role', user_role,
     'level', case when user_role = 'aluno' then coalesce(new.raw_user_meta_data ->> 'level', 'graduacao') else null end,
     'course', case when user_role = 'aluno' and coalesce(new.raw_user_meta_data ->> 'level', 'graduacao') = 'graduacao' then new.raw_user_meta_data ->> 'course' else null end,

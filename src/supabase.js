@@ -119,7 +119,7 @@
           return (data && data.updated_at) || new Date().toISOString();
         } catch (rpcError) {
           if (rpcError.code === "CONFLICT") throw rpcError;
-          console.warn("labcon_atomic_upsert nao disponivel, usando save direto.", rpcError);
+          console.warn("labcon_atomic_upsert não disponível, usando save direto.", rpcError);
         }
       }
 
@@ -135,7 +135,7 @@
         id: `auth-${authUser.id}`,
         authUserId: authUser.id,
         email: authUser.email,
-        name: metadata.name || authUser.email?.split("@")[0] || "Usuario",
+        name: metadata.name || authUser.email?.split("@")[0] || "Usuário",
         role,
         level: role === "aluno" ? metadata.level || "graduacao" : undefined,
         course: role === "aluno" && metadata.level !== "pos-graduacao" ? metadata.course || "" : undefined,

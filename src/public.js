@@ -30,7 +30,7 @@
       localStorage.setItem(cfg.storeKey, JSON.stringify({ ...state, _v: cfg.schemaVersion }));
       return state;
     } catch (error) {
-      console.warn("Nao foi possivel carregar dados do Supabase. Usando cache local.", error);
+      console.warn("Não foi possível carregar dados do Supabase. Usando cache local.", error);
       return fallbackState;
     }
   }
@@ -57,7 +57,7 @@
     return {
       professor: "Professor",
       aluno: "Aluno",
-      tecnico: "Tecnico",
+      tecnico: "Técnico",
       administrador: "Administrador"
     }[role] || role;
   }
@@ -75,7 +75,7 @@
   }
 
   function labOptions(state, selectedValue = "all") {
-    return option("all", "Todos os laboratorios", selectedValue) +
+    return option("all", "Todos os laboratórios", selectedValue) +
       sortByName(state.labs).map((lab) => option(lab.id, lab.name, selectedValue)).join("");
   }
 
@@ -119,7 +119,7 @@
   }
 
   function occupancyBar(percent) {
-    return `<div class="occupancy-bar" aria-label="Ocupacao ${percent}%">
+    return `<div class="occupancy-bar" aria-label="Ocupação ${percent}%">
       <span data-occupancy-width="${Math.max(0, Math.min(percent, 100))}"></span>
     </div>`;
   }
@@ -138,7 +138,7 @@
         .map((reservation) => reservation.deskId)
     );
     const users = publicUsers(state, labFilter, dayFilter);
-    const labName = labFilter === "all" ? "Todos os laboratorios" : getLab(state, labFilter)?.name || "Laboratorio";
+    const labName = labFilter === "all" ? "Todos os laboratórios" : getLab(state, labFilter)?.name || "Laboratório";
     const dayName = dayFilter === "all" ? "Todos os dias" : dayFilter;
 
     return {
@@ -173,8 +173,8 @@
   function renderInsight(state, labFilter, dayFilter) {
     const data = insight(state, labFilter, dayFilter);
     $("#public-insight").innerHTML = `
-      <div class="info-chip"><span>Laboratorio</span><strong>${escapeHtml(data.labName)}</strong></div>
-      <div class="info-chip"><span>Periodo</span><strong>${escapeHtml(data.dayName)}</strong></div>
+      <div class="info-chip"><span>Laboratório</span><strong>${escapeHtml(data.labName)}</strong></div>
+      <div class="info-chip"><span>Período</span><strong>${escapeHtml(data.dayName)}</strong></div>
       <div class="info-chip"><span>Mesas ocupadas</span><strong>${data.occupied}</strong></div>
       <div class="info-chip"><span>Mesas livres</span><strong>${data.free}</strong></div>
     `;
@@ -184,7 +184,7 @@
     const users = publicUsers(state, labFilter, dayFilter);
     $("#public-users").innerHTML = users.length
       ? users.map((user) => `<span class="user-chip"><strong>${escapeHtml(user.name)}</strong> | ${escapeHtml(roleLabel(user.role))}</span>`).join("")
-      : empty("Nenhum usuario vinculado ao filtro atual.");
+      : empty("Nenhum usuário vinculado ao filtro atual.");
   }
 
   function renderBoard(state, labFilter, dayFilter) {
@@ -220,11 +220,11 @@
         }, {});
         const schedule = Object.values(byDay)
           .sort((a, b) => cfg.days.indexOf(a.day) - cfg.days.indexOf(b.day))
-          .map((reservation) => `<span>${escapeHtml(reservation.day)} | ${escapeHtml(reservation.start)} as ${escapeHtml(reservation.end)}</span>`)
+          .map((reservation) => `<span>${escapeHtml(reservation.day)} | ${escapeHtml(reservation.start)} às ${escapeHtml(reservation.end)}</span>`)
           .join("");
 
         return `<article class="desk-user-card">
-          <strong>${escapeHtml(user?.name || "Usuario removido")}</strong>
+          <strong>${escapeHtml(user?.name || "Usuário removido")}</strong>
           <div class="desk-user-schedule">${schedule}</div>
         </article>`;
       }).join("");
@@ -235,7 +235,7 @@
       const status = reservations.length ? "Ocupada" : "Livre";
       const reservationHtml = reservations.length
         ? userSchedule(reservations)
-        : empty("Sem reserva no periodo.");
+        : empty("Sem reserva no período.");
 
       return `<article class="desk-card">
         <header>
@@ -258,7 +258,7 @@
         <header class="lab-section-header">
           <div>
             <h3>${escapeHtml(lab.name)}</h3>
-            <span>${escapeHtml(lab.location || "Sem localizacao")}</span>
+            <span>${escapeHtml(lab.location || "Sem localização")}</span>
           </div>
           <div class="lab-section-status">
             <strong>${occupancy.percent}% ocupado</strong>
@@ -299,7 +299,7 @@
 
   function applyLabVisibility(section, button, collapsed) {
     const grid = section.querySelector(".lab-desk-grid");
-    const labName = section.querySelector("h3")?.textContent || "Laboratorio";
+    const labName = section.querySelector("h3")?.textContent || "Laboratório";
     section.classList.toggle("collapsed", collapsed);
     grid.hidden = collapsed;
     button.setAttribute("aria-expanded", collapsed ? "false" : "true");

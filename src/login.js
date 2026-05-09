@@ -95,14 +95,14 @@
       localStorage.setItem(cfg.storeKey, JSON.stringify({ ...state, _v: cfg.schemaVersion }));
       professors = sortByName(state.users.filter((user) => user.role === "professor"));
     } catch (error) {
-      console.warn("Nao foi possivel carregar professores do Supabase. Usando cache local.", error);
+      console.warn("Não foi possível carregar professores do Supabase. Usando cache local.", error);
       professors = sortByName(loadLocalState().users.filter((user) => user.role === "professor"));
     }
 
     select.disabled = false;
     select.innerHTML = professors.length
       ? option("", "Selecione") + professors.map((professor) => option(professor.id, professor.name)).join("")
-      : option("", "Cadastre um professor na area administrativa");
+      : option("", "Cadastre um professor na área administrativa");
   }
 
   tabs.forEach((tab) => {
@@ -129,7 +129,7 @@
     const { error } = await auth.signInWithPassword({ email, password });
 
     if (error) {
-      showToast("Nao foi possivel entrar. Verifique e-mail e senha.");
+      showToast("Não foi possível entrar. Verifique e-mail e senha.");
       return;
     }
 
@@ -176,17 +176,17 @@
     });
 
     if (error) {
-      showToast("Nao foi possivel criar o cadastro.");
+      showToast("Não foi possível criar o cadastro.");
       return;
     }
 
     try {
       await window.LabConSupabase.upsertUserFromAuth(data.user);
     } catch (syncError) {
-      console.warn("Cadastro criado no Auth; sincronizacao direta com labcon_state ficou para o trigger do Supabase.", syncError);
+      console.warn("Cadastro criado no Auth; sincronização direta com labcon_state ficou para o trigger do Supabase.", syncError);
     }
 
-    showToast("Cadastro criado. Verifique seu e-mail se a confirmacao estiver ativa.");
+    showToast("Cadastro criado. Verifique seu e-mail se a confirmação estiver ativa.");
     form.reset();
     updateRegisterFields();
   });
@@ -200,11 +200,11 @@
     const { error } = await auth.resetPasswordForEmail(email, { redirectTo });
 
     if (error) {
-      showToast("Nao foi possivel enviar a recuperacao.");
+      showToast("Não foi possível enviar a recuperação.");
       return;
     }
 
-    showToast("Instrucoes de recuperacao enviadas por e-mail.");
+    showToast("Instruções de recuperação enviadas por e-mail.");
     event.currentTarget.reset();
   });
 

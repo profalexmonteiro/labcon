@@ -7,12 +7,12 @@
     <meta name="referrer" content="no-referrer">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
-    <title>LabCon | Controle de Laboratorios</title>
+    <title>LabCon | Controle de Laboratórios</title>
     <link rel="stylesheet" href="assets/css/styles.css">
   </head>
   <body>
     <div class="app-shell">
-      <aside class="sidebar" aria-label="Navegacao principal">
+      <aside class="sidebar" aria-label="Navegação principal">
         <div class="brand">
           <span class="brand-mark">LC</span>
           <div>
@@ -22,15 +22,15 @@
         </div>
 
         <nav class="nav-list">
-          <button class="nav-item active" type="button" data-view="dashboard">Painel publico</button>
+          <button class="nav-item active" type="button" data-view="dashboard">Painel público</button>
           <button class="nav-item" type="button" data-view="reservations">Reservas</button>
           <button class="nav-item" type="button" data-view="profile">Meu cadastro</button>
           <div class="nav-group">
             <div class="nav-group-title">Cadastro</div>
             <div class="nav-sublist">
-              <button class="nav-item" type="button" data-view="users">Usuarios</button>
+              <button class="nav-item" type="button" data-view="users">Usuários</button>
               <div class="nav-nested">
-                <button class="nav-item" type="button" data-view="labs">Laboratorios</button>
+                <button class="nav-item" type="button" data-view="labs">Laboratórios</button>
                 <button class="nav-item nav-child" type="button" data-view="desks">Mesas</button>
               </div>
             </div>
@@ -46,12 +46,12 @@
       <main class="main">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Gerenciamento de laboratorios de pesquisa</p>
-            <h1 id="view-title">Painel publico</h1>
+            <p class="eyebrow">Gerenciamento de laboratórios de pesquisa</p>
+            <h1 id="view-title">Painel público</h1>
           </div>
           <div class="topbar-actions">
-            <select id="public-lab-filter" aria-label="Filtrar laboratorio do painel"></select>
-            <a class="button ghost" href="index.html">Painel publico</a>
+            <select id="public-lab-filter" aria-label="Filtrar laboratório do painel"></select>
+            <a class="button ghost" href="index.html">Painel público</a>
             <a class="button ghost" href="login.html" id="logout-link">Sair</a>
             <button class="button ghost" type="button" id="seed-data">Popular exemplo</button>
             <button class="button danger" type="button" id="clear-data">Limpar dados</button>
@@ -63,7 +63,7 @@
 
           <div class="metrics-grid">
             <article class="metric">
-              <span>Laboratorios</span>
+              <span>Laboratórios</span>
               <strong id="metric-labs">0</strong>
             </article>
             <article class="metric">
@@ -81,7 +81,7 @@
           </div>
 
           <div class="section-heading">
-            <h2>Ocupacao por laboratorio</h2>
+            <h2>Ocupação por laboratório</h2>
             <select id="dashboard-day-filter" aria-label="Filtrar dia no painel"></select>
           </div>
           <div id="public-users" class="public-users"></div>
@@ -94,11 +94,11 @@
               <input type="hidden" id="reservation-id">
               <h2>Reserva de mesa</h2>
               <div class="field">
-                <label for="reservation-user">Usuario</label>
+                <label for="reservation-user">Usuário</label>
                 <select id="reservation-user" required></select>
               </div>
               <div class="field">
-                <label for="reservation-lab">Laboratorio</label>
+                <label for="reservation-lab">Laboratório</label>
                 <select id="reservation-lab" required></select>
               </div>
               <div class="field">
@@ -106,14 +106,14 @@
                 <select id="reservation-desk" required></select>
               </div>
               <div class="field">
-                <label>Grade de reserva: segunda a sabado, 08:00 as 22:00</label>
+                <label>Grade de reserva: segunda a sábado, 08:00 às 22:00</label>
                 <div class="matrix-toolbar">
-                  <span><i class="legend-box available"></i>Disponivel</span>
+                  <span><i class="legend-box available"></i>Disponível</span>
                   <span><i class="legend-box selected"></i>Selecionado</span>
                   <span><i class="legend-box occupied"></i>Ocupado</span>
                 </div>
                 <div class="check-grid" id="reservation-days"></div>
-                <div class="selection-summary" id="reservation-selection-summary">Nenhum horario selecionado.</div>
+                <div class="selection-summary" id="reservation-selection-summary">Nenhum horário selecionado.</div>
               </div>
               <div class="form-actions">
                 <button class="button primary" type="submit">Salvar reserva</button>
@@ -123,7 +123,7 @@
             <div class="panel">
               <div class="section-heading compact">
                 <h2>Reservas cadastradas</h2>
-                <select id="reservation-list-filter" aria-label="Filtrar reservas por laboratorio"></select>
+                <select id="reservation-list-filter" aria-label="Filtrar reservas por laboratório"></select>
               </div>
               <div id="reservations-list" class="table-list"></div>
             </div>
@@ -136,8 +136,8 @@
               <h2>Meu cadastro</h2>
               <div class="profile-photo-field">
                 <input id="profile-photo-data" type="hidden">
-                <div class="profile-photo-preview" aria-label="Foto do usuario">
-                  <img id="profile-photo-preview" class="hidden" alt="Foto do usuario">
+                <div class="profile-photo-preview" aria-label="Foto do usuário">
+                  <img id="profile-photo-preview" class="hidden" alt="Foto do usuário">
                   <span id="profile-photo-placeholder">Sem foto</span>
                 </div>
                 <div class="profile-photo-controls">
@@ -164,10 +164,10 @@
               </div>
               <div class="split-fields two profile-student-only">
                 <div class="field">
-                  <label for="profile-level">Nivel</label>
+                  <label for="profile-level">Nível</label>
                   <select id="profile-level">
-                    <option value="graduacao">Graduacao</option>
-                    <option value="pos-graduacao">Pos-graduacao</option>
+                    <option value="graduacao">Graduação</option>
+                    <option value="pos-graduacao">Pós-graduação</option>
                   </select>
                 </div>
                 <div class="field">
@@ -181,11 +181,11 @@
                   <select id="profile-course"></select>
                 </div>
                 <div class="field">
-                  <label for="profile-program">Vinculo</label>
+                  <label for="profile-program">Vínculo</label>
                   <select id="profile-program">
                     <option value="PIBIC">PIBIC</option>
                     <option value="PIID">PIID</option>
-                    <option value="Voluntario">Voluntario</option>
+                    <option value="Voluntario">Voluntário</option>
                   </select>
                 </div>
               </div>
@@ -208,12 +208,12 @@
                   <input id="profile-entry-date" type="date">
                 </div>
                 <div class="field">
-                  <label for="profile-qualification-deadline">Data limite de Qualificacao</label>
+                  <label for="profile-qualification-deadline">Data limite de Qualificação</label>
                   <input id="profile-qualification-deadline" type="date">
                 </div>
               </div>
               <div class="field profile-student-only">
-                <label for="profile-advisor-meeting-url">Link de reuniao com orientador</label>
+                <label for="profile-advisor-meeting-url">Link de reunião com orientador</label>
                 <input id="profile-advisor-meeting-url" type="url" maxlength="240" placeholder="https://">
               </div>
               <div class="field profile-student-only">
@@ -221,11 +221,11 @@
                 <input id="profile-article-url" type="url" maxlength="240" placeholder="https://">
               </div>
               <div class="field profile-student-only">
-                <label for="profile-qualification-url">Link da Qualificacao</label>
+                <label for="profile-qualification-url">Link da Qualificação</label>
                 <input id="profile-qualification-url" type="url" maxlength="240" placeholder="https://">
               </div>
               <div class="field profile-student-only">
-                <label for="profile-thesis-url">Link da Dissertacao / Tese</label>
+                <label for="profile-thesis-url">Link da Dissertação / Tese</label>
                 <input id="profile-thesis-url" type="url" maxlength="240" placeholder="https://">
               </div>
               <div class="form-actions">
@@ -243,7 +243,7 @@
           <div class="work-layout">
             <form class="panel form-panel" id="user-form">
               <input type="hidden" id="user-id">
-              <h2>Cadastro de usuario</h2>
+              <h2>Cadastro de usuário</h2>
               <div class="field">
                 <label for="user-name">Nome completo</label>
                 <input id="user-name" type="text" required autocomplete="name" minlength="3" maxlength="120">
@@ -264,15 +264,15 @@
                   <select id="user-role" required>
                     <option value="professor">Professor</option>
                     <option value="aluno">Aluno</option>
-                    <option value="tecnico">Tecnico</option>
+                    <option value="tecnico">Técnico</option>
                     <option value="administrador">Administrador</option>
                   </select>
                 </div>
                 <div class="field student-only">
-                  <label for="student-level">Nivel</label>
+                  <label for="student-level">Nível</label>
                   <select id="student-level">
-                    <option value="graduacao">Graduacao</option>
-                    <option value="pos-graduacao">Pos-graduacao</option>
+                    <option value="graduacao">Graduação</option>
+                    <option value="pos-graduacao">Pós-graduação</option>
                   </select>
                 </div>
               </div>
@@ -283,11 +283,11 @@
                   <select id="student-course"></select>
                 </div>
                 <div class="field">
-                  <label for="student-program">Vinculo</label>
+                  <label for="student-program">Vínculo</label>
                   <select id="student-program">
                     <option value="PIBIC">PIBIC</option>
                     <option value="PIID">PIID</option>
-                    <option value="Voluntario">Voluntario</option>
+                    <option value="Voluntario">Voluntário</option>
                   </select>
                 </div>
               </div>
@@ -311,12 +311,12 @@
                 <input id="student-research-project" type="text" maxlength="160">
               </div>
               <div class="form-actions">
-                <button class="button primary" type="submit">Salvar usuario</button>
+                <button class="button primary" type="submit">Salvar usuário</button>
                 <button class="button ghost" type="button" data-reset="user-form">Cancelar</button>
               </div>
             </form>
             <div class="panel">
-              <h2>Usuarios cadastrados</h2>
+              <h2>Usuários cadastrados</h2>
               <div id="users-list" class="table-list"></div>
             </div>
           </div>
@@ -326,22 +326,22 @@
           <div class="work-layout">
             <form class="panel form-panel" id="lab-form">
               <input type="hidden" id="lab-id">
-              <h2>Cadastro de laboratorio</h2>
+              <h2>Cadastro de laboratório</h2>
               <div class="field">
-                <label for="lab-name">Nome do laboratorio</label>
+                <label for="lab-name">Nome do laboratório</label>
                 <input id="lab-name" type="text" required minlength="2" maxlength="80">
               </div>
               <div class="field">
-                <label for="lab-location">Localizacao</label>
+                <label for="lab-location">Localização</label>
                 <input id="lab-location" type="text" placeholder="Bloco, sala ou campus" maxlength="120">
               </div>
               <div class="form-actions">
-                <button class="button primary" type="submit">Salvar laboratorio</button>
+                <button class="button primary" type="submit">Salvar laboratório</button>
                 <button class="button ghost" type="button" data-reset="lab-form">Cancelar</button>
               </div>
             </form>
             <div class="panel">
-              <h2>Laboratorios cadastrados</h2>
+              <h2>Laboratórios cadastrados</h2>
               <div id="labs-list" class="table-list"></div>
             </div>
           </div>
@@ -353,11 +353,11 @@
               <input type="hidden" id="desk-id">
               <h2>Cadastro de mesa</h2>
               <div class="field">
-                <label for="desk-lab">Laboratorio</label>
+                <label for="desk-lab">Laboratório</label>
                 <select id="desk-lab" required></select>
               </div>
               <div class="field">
-                <label for="desk-name">Identificacao da mesa</label>
+                <label for="desk-name">Identificação da mesa</label>
                 <input id="desk-name" type="text" required placeholder="Mesa 01" minlength="1" maxlength="40">
               </div>
               <div class="form-actions">
@@ -368,7 +368,7 @@
             <div class="panel">
               <div class="section-heading compact">
                 <h2>Mesas cadastradas</h2>
-                <select id="desk-list-filter" aria-label="Filtrar mesas por laboratorio"></select>
+                <select id="desk-list-filter" aria-label="Filtrar mesas por laboratório"></select>
               </div>
               <div id="desks-list" class="table-list"></div>
             </div>

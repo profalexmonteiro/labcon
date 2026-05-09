@@ -1,4 +1,4 @@
--- Crie primeiro um usuario no Supabase Auth pelo painel:
+-- Crie primeiro um usuário no Supabase Auth pelo painel:
 -- Authentication > Users > Add user
 --
 -- Sugestao para ambiente de desenvolvimento:
@@ -6,7 +6,7 @@
 -- Senha temporaria: defina uma senha forte e troque antes de publicar.
 --
 -- Depois execute este SQL no SQL Editor do Supabase para dar perfil
--- de administrador ao usuario. Troque o e-mail abaixo se necessario.
+-- de administrador ao usuário. Troque o e-mail abaixo se necessário.
 
 create temp table if not exists labcon_bootstrap_config (
   admin_email text primary key
@@ -33,7 +33,7 @@ begin
     from auth.users
     where email = admin_email
   ) then
-    raise exception 'Usuario % nao encontrado em Authentication > Users.', admin_email;
+    raise exception 'Usuário % não encontrado em Authentication > Users.', admin_email;
   end if;
 
   update auth.users

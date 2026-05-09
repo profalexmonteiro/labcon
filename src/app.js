@@ -50,7 +50,7 @@
         this.cacheLocal();
         this.isRemoteReady = true;
       } catch (error) {
-        console.warn("Nao foi possivel carregar dados do Supabase. Usando cache local.", error);
+        console.warn("Não foi possível carregar dados do Supabase. Usando cache local.", error);
         this.state = loadLocal();
       }
     },
@@ -69,7 +69,7 @@
         this.isRemoteReady = true;
       } catch (error) {
         this.isRemoteReady = false;
-        console.warn("Nao foi possivel salvar no Supabase. Dados mantidos no cache local.", error);
+        console.warn("Não foi possível salvar no Supabase. Dados mantidos no cache local.", error);
         throw error;
       }
     },
@@ -146,7 +146,7 @@
         id: existingUser?.id || `auth-${authUser.id}`,
         authUserId: authUser.id,
         email: authUser.email,
-        name: metadata.name || existingUser?.name || authUser.email?.split("@")[0] || "Usuario",
+        name: metadata.name || existingUser?.name || authUser.email?.split("@")[0] || "Usuário",
         role,
         photoDataUrl: metadata.photoDataUrl || existingUser?.photoDataUrl || "",
         source: "auth"
@@ -222,13 +222,13 @@
       return {
         professor: "Professor",
         aluno: "Aluno",
-        tecnico: "Tecnico",
+        tecnico: "Técnico",
         administrador: "Administrador"
       }[role] || role;
     },
 
     levelLabel(level) {
-      return level === "pos-graduacao" ? "Pos-graduacao" : "Graduacao";
+      return level === "pos-graduacao" ? "Pós-graduação" : "Graduação";
     },
 
     getUser(state, id) {
@@ -316,45 +316,45 @@
     },
 
     validateUser(state, user) {
-      if (!user.name) return "Informe o nome do usuario.";
-      if (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) return "Informe um e-mail valido.";
+      if (!user.name) return "Informe o nome do usuário.";
+      if (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) return "Informe um e-mail válido.";
       if (user.email) {
         const emailOwner = state.users.find((entry) => {
           return entry.id !== user.id && entry.email && entry.email.toLowerCase() === user.email.toLowerCase();
         });
-        if (emailOwner) return "Ja existe um usuario cadastrado com este e-mail.";
+        if (emailOwner) return "Já existe um usuário cadastrado com este e-mail.";
       }
       if (user.role === "aluno" && !user.advisorId) return "Cadastre e selecione um professor orientador.";
-      if (user.role === "aluno" && !Domain.getUser(state, user.advisorId)) return "O orientador selecionado nao existe.";
+      if (user.role === "aluno" && !Domain.getUser(state, user.advisorId)) return "O orientador selecionado não existe.";
       return "";
     },
 
     validateLab(lab) {
-      if (!lab.name) return "Informe o nome do laboratorio.";
+      if (!lab.name) return "Informe o nome do laboratório.";
       return "";
     },
 
     validateDesk(state, desk) {
-      if (!desk.labId) return "Selecione um laboratorio.";
-      if (!desk.name) return "Informe a identificacao da mesa.";
-      if (!Domain.getLab(state, desk.labId)) return "O laboratorio selecionado nao existe.";
+      if (!desk.labId) return "Selecione um laboratório.";
+      if (!desk.name) return "Informe a identificação da mesa.";
+      if (!Domain.getLab(state, desk.labId)) return "O laboratório selecionado não existe.";
       return "";
     },
 
     validateReservation(state, reservation, schedules) {
       if (!reservation.userId || !reservation.labId || !reservation.deskId) {
-        return "Selecione usuario, laboratorio e mesa.";
+        return "Selecione usuário, laboratório e mesa.";
       }
       if (!schedules.length) return "Selecione pelo menos um dia.";
-      if (!Domain.getUser(state, reservation.userId)) return "O usuario selecionado nao existe.";
-      if (!Domain.getLab(state, reservation.labId)) return "O laboratorio selecionado nao existe.";
+      if (!Domain.getUser(state, reservation.userId)) return "O usuário selecionado não existe.";
+      if (!Domain.getLab(state, reservation.labId)) return "O laboratório selecionado não existe.";
       const desk = Domain.getDesk(state, reservation.deskId);
-      if (!desk) return "A mesa selecionada nao existe.";
-      if (desk.labId !== reservation.labId) return "A mesa selecionada nao pertence ao laboratorio escolhido.";
+      if (!desk) return "A mesa selecionada não existe.";
+      if (desk.labId !== reservation.labId) return "A mesa selecionada não pertence ao laboratório escolhido.";
       const invalidSchedule = schedules.find((schedule) => !schedule.start || !schedule.end);
-      if (invalidSchedule) return `Informe a faixa de horario de ${invalidSchedule.day}.`;
+      if (invalidSchedule) return `Informe a faixa de horário de ${invalidSchedule.day}.`;
       const invalidRange = schedules.find((schedule) => schedule.start >= schedule.end);
-      if (invalidRange) return `O horario final de ${invalidRange.day} deve ser maior que o inicial.`;
+      if (invalidRange) return `O horário final de ${invalidRange.day} deve ser maior que o inicial.`;
       return "";
     },
 
@@ -386,7 +386,7 @@
           { id: Utils.uid("user"), name: "Eduardo Feitosa", role: "professor" }
         ],
         labs: [
-          { id: labId, name: "ETSS", location: "Laboratorio ETSS" }
+          { id: labId, name: "ETSS", location: "Laboratório ETSS" }
         ],
         desks: bayLetters.map((letter) => ({ id: Utils.uid("desk"), labId, name: `Baia ${letter}` })),
         reservations: []
@@ -443,7 +443,7 @@
       } else {
         $("#reservation-user").innerHTML = reservationUser
           ? Utils.option(reservationUser.id, reservationUser.name, reservationUser.id)
-          : Utils.option("", "Usuario da sessao nao encontrado", "");
+          : Utils.option("", "Usuário da sessão não encontrado", "");
         $("#reservation-user").disabled = true;
       }
       $("#reservation-lab").innerHTML = Templates.labOptions(state, $("#reservation-lab").value);
@@ -460,7 +460,7 @@
     renderProfile(state) {
       const user = Controller.currentUser(state);
       if (!user) {
-        if (this.els.profileSummary) this.els.profileSummary.innerHTML = Templates.empty("Usuario da sessao nao encontrado.");
+        if (this.els.profileSummary) this.els.profileSummary.innerHTML = Templates.empty("Usuário da sessão não encontrado.");
         return;
       }
 
@@ -488,18 +488,18 @@
         `Perfil: ${Domain.roleLabel(user.role)}`,
         user.email ? `E-mail: ${user.email}` : "",
         user.photoDataUrl ? "Foto cadastrada" : "",
-        user.level ? `Nivel: ${Domain.levelLabel(user.level)}` : "",
+        user.level ? `Nível: ${Domain.levelLabel(user.level)}` : "",
         user.course ? `Curso: ${user.course}` : "",
-        user.program ? `Vinculo: ${user.program}` : "",
+        user.program ? `Vínculo: ${user.program}` : "",
         user.postgradType ? `Tipo: ${user.postgradType}` : "",
         advisor ? `Orientador: ${advisor}` : "",
         user.researchProject ? `Projeto: ${user.researchProject}` : "",
         user.entryDate ? `Entrada: ${user.entryDate}` : "",
-        user.qualificationDeadline ? `Limite qualificacao: ${user.qualificationDeadline}` : "",
-        user.advisorMeetingUrl ? `Reuniao: ${user.advisorMeetingUrl}` : "",
+        user.qualificationDeadline ? `Limite qualificação: ${user.qualificationDeadline}` : "",
+        user.advisorMeetingUrl ? `Reunião: ${user.advisorMeetingUrl}` : "",
         user.articleUrl ? `Artigo / Journal: ${user.articleUrl}` : "",
-        user.qualificationUrl ? `Qualificacao: ${user.qualificationUrl}` : "",
-        user.thesisUrl ? `Dissertacao / Tese: ${user.thesisUrl}` : ""
+        user.qualificationUrl ? `Qualificação: ${user.qualificationUrl}` : "",
+        user.thesisUrl ? `Dissertação / Tese: ${user.thesisUrl}` : ""
       ].filter(Boolean);
       this.els.profileSummary.innerHTML = Templates.listRow(user.name, details, "profile", user.id, "", false);
     },
@@ -587,7 +587,7 @@
       if (!this.els.reservationSelectionSummary) return;
       const schedule = this.selectedReservationSchedule();
       if (!schedule.length) {
-        this.els.reservationSelectionSummary.textContent = "Nenhum horario selecionado.";
+        this.els.reservationSelectionSummary.textContent = "Nenhum horário selecionado.";
         return;
       }
       const byDay = schedule.reduce((acc, item) => {
@@ -620,14 +620,14 @@
           .filter((reservation) => (labFilter === "all" || reservation.labId === labFilter) && (dayFilter === "all" || reservation.day === dayFilter))
           .map((reservation) => reservation.deskId)
       );
-      const labName = labFilter === "all" ? "Todos os laboratorios" : Domain.getLab(state, labFilter)?.name || "Laboratorio";
+      const labName = labFilter === "all" ? "Todos os laboratórios" : Domain.getLab(state, labFilter)?.name || "Laboratório";
       const dayName = dayFilter === "all" ? "Todos os dias" : dayFilter;
       const occupied = desks.filter((desk) => occupiedDeskIds.has(desk.id)).length;
       const free = desks.length - occupied;
 
       this.els.publicInsight.innerHTML = `
-        <div class="info-chip"><span>Laboratorio</span><strong>${Utils.escapeHtml(labName)}</strong></div>
-        <div class="info-chip"><span>Periodo</span><strong>${Utils.escapeHtml(dayName)}</strong></div>
+        <div class="info-chip"><span>Laboratório</span><strong>${Utils.escapeHtml(labName)}</strong></div>
+        <div class="info-chip"><span>Período</span><strong>${Utils.escapeHtml(dayName)}</strong></div>
         <div class="info-chip"><span>Mesas ocupadas</span><strong>${occupied}</strong></div>
         <div class="info-chip"><span>Mesas livres</span><strong>${free}</strong></div>
       `;
@@ -636,7 +636,7 @@
     renderUsers(state) {
       const list = $("#users-list");
       if (!state.users.length) {
-        list.innerHTML = Templates.empty("Nenhum usuario cadastrado.");
+        list.innerHTML = Templates.empty("Nenhum usuário cadastrado.");
         return;
       }
 
@@ -659,7 +659,7 @@
     renderLabs(state) {
       const list = $("#labs-list");
       if (!state.labs.length) {
-        list.innerHTML = Templates.empty("Nenhum laboratorio cadastrado.");
+        list.innerHTML = Templates.empty("Nenhum laboratório cadastrado.");
         return;
       }
 
@@ -668,7 +668,7 @@
         const occupancy = Domain.labOccupancy(state, lab.id);
         return Templates.listRow(
           lab.name,
-          [lab.location || "Sem localizacao", `${desks} mesa(s)`, `${occupancy.percent}% ocupado`],
+          [lab.location || "Sem localização", `${desks} mesa(s)`, `${occupancy.percent}% ocupado`],
           "lab",
           lab.id,
           Templates.occupancyBar(occupancy.percent)
@@ -704,7 +704,7 @@
 
         return `<article class="desk-lab-group">
           <header>
-            <h3>${Utils.escapeHtml(lab?.name || "Laboratorio removido")}</h3>
+            <h3>${Utils.escapeHtml(lab?.name || "Laboratório removido")}</h3>
             <span>${lab?.location ? Utils.escapeHtml(lab.location) : `${labDesks.length} mesa(s)`}</span>
           </header>
           <div class="desk-lab-list">${desksHtml}</div>
@@ -747,7 +747,7 @@
                 const desk = Domain.getDesk(state, reservation.deskId);
                 return Templates.reservationScheduleRow(reservation, [
                   `${reservation.start} as ${reservation.end}`,
-                  lab?.name || "Laboratorio removido",
+                  lab?.name || "Laboratório removido",
                   desk?.name || "Mesa removida"
                 ]);
               }).join("");
@@ -760,8 +760,8 @@
 
         return `<article class="reservation-user-group">
           <header>
-            <h3>${Utils.escapeHtml(user?.name || "Usuario removido")}</h3>
-            <span>${userReservations.length} horario(s)</span>
+            <h3>${Utils.escapeHtml(user?.name || "Usuário removido")}</h3>
+            <span>${userReservations.length} horário(s)</span>
           </header>
           ${daysHtml}
         </article>`;
@@ -788,11 +788,11 @@
 
     showView(view) {
       const titles = {
-        dashboard: "Painel publico",
+        dashboard: "Painel público",
         reservations: "Reservas",
         profile: "Meu cadastro",
-        users: "Usuarios",
-        labs: "Laboratorios",
+        users: "Usuários",
+        labs: "Laboratórios",
         desks: "Mesas"
       };
 
@@ -851,7 +851,7 @@
 
     labOptions(state, selectedValue = "", includeAll = false) {
       const initial = includeAll
-        ? Utils.option("all", "Todos os laboratorios", selectedValue)
+        ? Utils.option("all", "Todos os laboratórios", selectedValue)
         : Utils.option("", "Selecione", selectedValue);
       return initial + Utils.sortByName(state.labs).map((lab) => Utils.option(lab.id, lab.name, selectedValue)).join("");
     },
@@ -864,7 +864,7 @@
 
     userOptions(state, selectedValue = "") {
       const users = Utils.sortByName(state.users);
-      if (!users.length) return Utils.option("", "Cadastre usuarios", selectedValue);
+      if (!users.length) return Utils.option("", "Cadastre usuários", selectedValue);
       return Utils.option("", "Selecione", selectedValue) + users.map((user) => {
         return Utils.option(user.id, `${user.name} - ${Domain.roleLabel(user.role)}`, selectedValue);
       }).join("");
@@ -930,13 +930,13 @@
     },
 
     occupancyBar(percent) {
-      return `<div class="occupancy-bar" aria-label="Ocupacao ${percent}%">
+      return `<div class="occupancy-bar" aria-label="Ocupação ${percent}%">
         <span data-occupancy-width="${Math.max(0, Math.min(percent, 100))}"></span>
       </div>`;
     },
 
     publicUsers(users) {
-      if (!users.length) return Templates.empty("Nenhum usuario vinculado ao filtro atual.");
+      if (!users.length) return Templates.empty("Nenhum usuário vinculado ao filtro atual.");
       return users.map((user) => `<span class="user-chip">
         <strong>${Utils.escapeHtml(user.name)}</strong> | ${Utils.escapeHtml(Domain.roleLabel(user.role))}
       </span>`).join("");
@@ -947,7 +947,7 @@
       const status = reservations.length ? "Ocupada" : "Livre";
       const reservationsHtml = reservations.length
         ? Templates.deskUserSchedule(state, reservations)
-        : Templates.empty("Sem reserva no periodo.");
+        : Templates.empty("Sem reserva no período.");
 
       return `<article class="desk-card">
         <header>
@@ -987,11 +987,11 @@
         }, {});
         const schedule = Object.values(byDay)
           .sort((a, b) => Config.days.indexOf(a.day) - Config.days.indexOf(b.day))
-          .map((reservation) => `<span>${Utils.escapeHtml(reservation.day)} | ${Utils.escapeHtml(reservation.start)} as ${Utils.escapeHtml(reservation.end)}</span>`)
+          .map((reservation) => `<span>${Utils.escapeHtml(reservation.day)} | ${Utils.escapeHtml(reservation.start)} às ${Utils.escapeHtml(reservation.end)}</span>`)
           .join("");
 
         return `<article class="desk-user-card">
-          <strong>${Utils.escapeHtml(user?.name || "Usuario removido")}</strong>
+          <strong>${Utils.escapeHtml(user?.name || "Usuário removido")}</strong>
           <div class="desk-user-schedule">${schedule}</div>
         </article>`;
       }).join("");
@@ -1004,7 +1004,7 @@
         <header class="lab-section-header">
           <div>
             <h3>${Utils.escapeHtml(lab.name)}</h3>
-            <span>${Utils.escapeHtml(lab.location || "Sem localizacao")}</span>
+            <span>${Utils.escapeHtml(lab.location || "Sem localização")}</span>
           </div>
           <div class="lab-section-status">
             <strong>${occupancy.percent}% ocupado</strong>
@@ -1024,7 +1024,7 @@
 
   function applyLabVisibility(section, button, collapsed) {
     const grid = section.querySelector(".lab-desk-grid");
-    const labName = section.querySelector("h3")?.textContent || "Laboratorio";
+    const labName = section.querySelector("h3")?.textContent || "Laboratório";
     section.classList.toggle("collapsed", collapsed);
     grid.hidden = collapsed;
     button.setAttribute("aria-expanded", collapsed ? "false" : "true");
@@ -1091,7 +1091,7 @@
     bindEvents() {
       $$(".nav-item").forEach((item) => item.addEventListener("click", () => {
         if (!this.canAccess(item.dataset.view)) {
-          View.toast("Seu perfil nao possui acesso a esta area.");
+          View.toast("Seu perfil não possui acesso a esta área.");
           return;
         }
         View.showView(item.dataset.view);
@@ -1130,7 +1130,7 @@
 
       $("#seed-data").addEventListener("click", async () => {
         if (!this.canAccess("labs")) {
-          View.toast("Seu perfil nao possui permissao para popular dados.");
+          View.toast("Seu perfil não possui permissão para popular dados.");
           return;
         }
         await this.persist(() => Repository.seed(), "Dados de exemplo carregados.");
@@ -1138,7 +1138,7 @@
 
       $("#clear-data").addEventListener("click", async () => {
         if (!this.canAccess("labs")) {
-          View.toast("Seu perfil nao possui permissao para limpar dados.");
+          View.toast("Seu perfil não possui permissão para limpar dados.");
           return;
         }
         if (!confirm("Limpar todos os dados cadastrados?")) return;
@@ -1178,9 +1178,9 @@
       } catch (error) {
         View.render(Repository.getState());
         if (error.code === "CONFLICT") {
-          View.toast("Conflito detectado. Recarregue a pagina e tente novamente.");
+          View.toast("Conflito detectado. Recarregue a página e tente novamente.");
         } else {
-          View.toast("Dados salvos localmente, mas nao sincronizados no Supabase.");
+          View.toast("Dados salvos localmente, mas não sincronizados no Supabase.");
         }
       }
     },
@@ -1188,7 +1188,7 @@
     async saveUser(event) {
       event.preventDefault();
       if (!this.canAccess("users")) {
-        View.toast("Seu perfil nao possui acesso ao cadastro de usuarios.");
+        View.toast("Seu perfil não possui acesso ao cadastro de usuários.");
         return;
       }
       const state = Repository.getState();
@@ -1219,7 +1219,7 @@
       }
 
       const password = $("#user-password").value;
-      await this.persist(() => Repository.upsert("users", user), password ? "Usuario salvo. A senha nao foi armazenada no painel." : "Usuario salvo.");
+      await this.persist(() => Repository.upsert("users", user), password ? "Usuário salvo. A senha não foi armazenada no painel." : "Usuário salvo.");
       View.resetForm("user-form");
     },
 
@@ -1236,7 +1236,7 @@
 
       const maxSize = 500 * 1024;
       if (file.size > maxSize) {
-        View.toast("Use uma foto de ate 500 KB.");
+        View.toast("Use uma foto de até 500 KB.");
         event.target.value = "";
         return;
       }
@@ -1248,7 +1248,7 @@
         View.renderProfilePhoto(dataUrl);
       });
       reader.addEventListener("error", () => {
-        View.toast("Nao foi possivel carregar a foto.");
+        View.toast("Não foi possível carregar a foto.");
         event.target.value = "";
       });
       reader.readAsDataURL(file);
@@ -1265,7 +1265,7 @@
       const state = Repository.getState();
       const currentUser = this.currentUser(state);
       if (!currentUser) {
-        View.toast("Nao foi possivel identificar o usuario logado.");
+        View.toast("Não foi possível identificar o usuário logado.");
         return;
       }
 
@@ -1357,7 +1357,7 @@
     async saveLab(event) {
       event.preventDefault();
       if (!this.canAccess("labs")) {
-        View.toast("Seu perfil nao possui acesso ao cadastro de laboratorios.");
+        View.toast("Seu perfil não possui acesso ao cadastro de laboratórios.");
         return;
       }
       const lab = {
@@ -1372,14 +1372,14 @@
         return;
       }
 
-      await this.persist(() => Repository.upsert("labs", lab), "Laboratorio salvo.");
+      await this.persist(() => Repository.upsert("labs", lab), "Laboratório salvo.");
       View.resetForm("lab-form");
     },
 
     async saveDesk(event) {
       event.preventDefault();
       if (!this.canAccess("desks")) {
-        View.toast("Seu perfil nao possui acesso ao cadastro de mesas.");
+        View.toast("Seu perfil não possui acesso ao cadastro de mesas.");
         return;
       }
       const state = Repository.getState();
@@ -1404,7 +1404,7 @@
       const state = Repository.getState();
       const currentUser = this.currentUser(state);
       if (!currentUser) {
-        View.toast("Nao foi possivel identificar o usuario logado para a reserva.");
+        View.toast("Não foi possível identificar o usuário logado para a reserva.");
         return;
       }
       const reservation = {
@@ -1423,7 +1423,7 @@
 
       const reservations = Domain.buildReservationBatch(reservation, schedules);
       if (reservations.some((entry) => Domain.hasReservationConflict(state, entry))) {
-        View.toast("Ja existe reserva nessa mesa para esse dia e faixa de horario.");
+        View.toast("Já existe reserva nessa mesa para esse dia e faixa de horário.");
         return;
       }
 
@@ -1442,7 +1442,7 @@
         reservation: "reservations"
       }[type];
       if (requiredView && !this.canAccess(requiredView)) {
-        View.toast("Seu perfil nao possui acesso a esta acao.");
+        View.toast("Seu perfil não possui acesso a esta ação.");
         return;
       }
       const handlers = {
@@ -1500,7 +1500,7 @@
       if (!reservation) return;
       const currentUser = this.currentUser(state);
       if (!this.canReserveForOthers() && (!currentUser || reservation.userId !== currentUser.id)) {
-        View.toast("Voce so pode editar reservas feitas em seu proprio nome.");
+        View.toast("Você só pode editar reservas feitas em seu próprio nome.");
         return;
       }
 
@@ -1521,7 +1521,7 @@
         reservation: "reservations"
       }[type];
       if (requiredView && !this.canAccess(requiredView)) {
-        View.toast("Seu perfil nao possui acesso a esta acao.");
+        View.toast("Seu perfil não possui acesso a esta ação.");
         return;
       }
       if (type === "reservation") {
@@ -1529,22 +1529,22 @@
         const reservation = state.reservations.find((entry) => entry.id === id);
         const currentUser = this.currentUser(state);
         if (!this.canReserveForOthers() && (!reservation || !currentUser || reservation.userId !== currentUser.id)) {
-          View.toast("Voce so pode excluir reservas feitas em seu proprio nome.");
+          View.toast("Você só pode excluir reservas feitas em seu próprio nome.");
           return;
         }
       }
       const names = {
-        user: "usuario",
-        lab: "laboratorio",
+        user: "usuário",
+        lab: "laboratório",
         desk: "mesa",
         reservation: "reserva"
       };
       if (!confirm(`Excluir ${names[type]}?`)) return;
 
-      if (type === "user") await this.persist(() => Repository.removeUser(id), "Registro excluido.");
-      if (type === "lab") await this.persist(() => Repository.removeLab(id), "Registro excluido.");
-      if (type === "desk") await this.persist(() => Repository.removeDesk(id), "Registro excluido.");
-      if (type === "reservation") await this.persist(() => Repository.removeReservation(id), "Registro excluido.");
+      if (type === "user") await this.persist(() => Repository.removeUser(id), "Registro excluído.");
+      if (type === "lab") await this.persist(() => Repository.removeLab(id), "Registro excluído.");
+      if (type === "desk") await this.persist(() => Repository.removeDesk(id), "Registro excluído.");
+      if (type === "reservation") await this.persist(() => Repository.removeReservation(id), "Registro excluído.");
     }
   };
 

@@ -24,8 +24,8 @@
       ["21:00", "22:00"]
     ],
     courses: [
-      "Engenharia da Computacao",
-      "Ciencia da Computacao",
+      "Engenharia da Computação",
+      "Ciência da Computação",
       "Engenharia de Software",
       "Inteligencia Artificial",
       "Ciberseguranca"
