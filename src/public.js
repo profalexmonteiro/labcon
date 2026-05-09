@@ -173,8 +173,14 @@
   function renderInsight(state, labFilter, dayFilter) {
     const data = insight(state, labFilter, dayFilter);
     $("#public-insight").innerHTML = `
-      <div class="info-chip"><span>Laboratório</span><strong>${escapeHtml(data.labName)}</strong></div>
-      <div class="info-chip"><span>Período</span><strong>${escapeHtml(data.dayName)}</strong></div>
+      <div class="info-chip">
+        <label for="public-lab-filter">Laboratório</label>
+        <select id="public-lab-filter" aria-label="Filtrar laboratório do painel"></select>
+      </div>
+      <div class="info-chip">
+        <label for="dashboard-day-filter">Período</label>
+        <select id="dashboard-day-filter" aria-label="Filtrar dia no painel"></select>
+      </div>
       <div class="info-chip"><span>Mesas ocupadas</span><strong>${data.occupied}</strong></div>
       <div class="info-chip"><span>Mesas livres</span><strong>${data.free}</strong></div>
     `;
@@ -271,12 +277,12 @@
 
   async function render() {
     const state = await loadState();
-    const labFilter = $("#public-lab-filter").value || "all";
-    const dayFilter = $("#dashboard-day-filter").value || "all";
+    const labFilter = $("#public-lab-filter")?.value || "all";
+    const dayFilter = $("#dashboard-day-filter")?.value || "all";
 
+    renderInsight(state, labFilter, dayFilter);
     $("#public-lab-filter").innerHTML = labOptions(state, labFilter);
     $("#dashboard-day-filter").innerHTML = dayOptions(dayFilter);
-    renderInsight(state, labFilter, dayFilter);
     renderMetrics(state);
     renderBoard(state, labFilter, dayFilter);
     applyDynamicStyles();
@@ -299,8 +305,10 @@
     button.textContent = collapsed ? "Expandir" : "Contrair";
   }
 
-  $("#public-lab-filter").addEventListener("change", render);
-  $("#dashboard-day-filter").addEventListener("change", render);
+  document.addEventListener("change", (event) => {
+    if (!event.target.matches("#public-lab-filter, #dashboard-day-filter")) return;
+    render();
+  });
   document.addEventListener("click", (event) => {
     const button = event.target.closest("[data-toggle-lab]");
     if (!button) return;

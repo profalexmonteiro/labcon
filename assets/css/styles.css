@@ -370,11 +370,17 @@ select {
   padding: 12px;
 }
 
-.info-chip span {
+.info-chip span,
+.info-chip label {
   display: block;
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+.info-chip select {
+  width: 100%;
+  margin-top: 6px;
 }
 
 .info-chip strong {
