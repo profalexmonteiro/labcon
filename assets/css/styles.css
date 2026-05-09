@@ -421,6 +421,10 @@ select {
   align-items: start;
 }
 
+#reservations-view .work-layout {
+  grid-template-columns: minmax(802px, 1fr) minmax(320px, 0.75fr);
+}
+
 .panel {
   padding: 20px;
 }
@@ -679,6 +683,63 @@ select:focus {
   padding: 7px 10px;
 }
 
+.reservation-user-group {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+}
+
+.reservation-user-group > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.reservation-user-group h3,
+.reservation-day-group h4 {
+  margin: 0;
+}
+
+.reservation-user-group > header span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.reservation-day-group {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.reservation-day-group h4 {
+  color: var(--primary-dark);
+  font-size: 0.9rem;
+}
+
+.reservation-time-list {
+  display: grid;
+  gap: 8px;
+}
+
+.reservation-schedule-row {
+  background: #f8faf5;
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  padding: 10px;
+}
+
+.reservation-schedule-row strong {
+  display: block;
+}
+
 .board-grid {
   display: grid;
   gap: 14px;
@@ -935,6 +996,10 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
+  #reservations-view .work-layout {
+    grid-template-columns: 1fr;
+  }
+
   .form-panel {
     position: static;
   }
@@ -992,6 +1057,10 @@ select:focus {
   }
 
   .list-row {
+    grid-template-columns: 1fr;
+  }
+
+  .reservation-schedule-row {
     grid-template-columns: 1fr;
   }
 }

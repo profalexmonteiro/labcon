@@ -61,8 +61,13 @@ begin
     'email', new.email,
     'name', coalesce(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1), 'Usuario'),
     'role', user_role,
+    'level', case when user_role = 'aluno' then coalesce(new.raw_user_meta_data ->> 'level', 'graduacao') else null end,
+    'course', case when user_role = 'aluno' and coalesce(new.raw_user_meta_data ->> 'level', 'graduacao') = 'graduacao' then new.raw_user_meta_data ->> 'course' else null end,
+    'program', case when user_role = 'aluno' and coalesce(new.raw_user_meta_data ->> 'level', 'graduacao') = 'graduacao' then new.raw_user_meta_data ->> 'program' else null end,
+    'postgradType', case when user_role = 'aluno' and new.raw_user_meta_data ->> 'level' = 'pos-graduacao' then new.raw_user_meta_data ->> 'postgradType' else null end,
     'advisorId', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'advisorId' else null end,
     'advisorName', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'advisorName' else null end,
+    'researchProject', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'researchProject' else null end,
     'source', 'auth'
   ));
 
@@ -98,3 +103,50 @@ after insert or update of email, raw_app_meta_data, raw_user_meta_data
 on auth.users
 for each row
 execute function public.labcon_sync_auth_user();
+
+-- ============================================================
+-- Atomic upsert: previne race conditions em reservas
+-- Usa FOR UPDATE para serializar escritas concorrentes e
+-- optimistic concurrency control via updated_at.
+-- ============================================================
+create or replace function public.labcon_atomic_upsert(
+  p_new_state jsonb,
+  p_expected_updated_at timestamptz
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_updated_at timestamptz;
+  new_updated_at timestamptz;
+begin
+  select updated_at into current_updated_at
+  from public.labcon_state
+  where id = 'default'
+  for update;
+
+  if current_updated_at is null then
+    insert into public.labcon_state (id, data, updated_at)
+    values ('default', p_new_state, now())
+    on conflict (id) do update
+      set data = excluded.data, updated_at = excluded.updated_at
+    returning updated_at into new_updated_at;
+    return jsonb_build_object('ok', true, 'updated_at', new_updated_at);
+  end if;
+
+  if p_expected_updated_at is not null and current_updated_at > p_expected_updated_at then
+    return jsonb_build_object('ok', false, 'reason', 'concurrent_modification');
+  end if;
+
+  update public.labcon_state
+  set data = p_new_state, updated_at = now()
+  where id = 'default'
+  returning updated_at into new_updated_at;
+
+  return jsonb_build_object('ok', true, 'updated_at', new_updated_at);
+end;
+$$;
+
+grant execute on function public.labcon_atomic_upsert(jsonb, timestamptz) to authenticated;

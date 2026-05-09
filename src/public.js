@@ -1,27 +1,20 @@
 (function () {
   "use strict";
 
-  const storeKey = "labcon-state-v1";
-  const days = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"];
-  const reservationDays = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado"];
-  const reservationSlots = 14;
-  const emptyState = {
-    users: [],
-    labs: [],
-    desks: [],
-    reservations: []
-  };
+  const cfg = window.LabConConfig;
   const collapsedLabs = new Set();
 
   const $ = (selector) => document.querySelector(selector);
 
   function loadLocalState() {
-    const raw = localStorage.getItem(storeKey);
-    if (!raw) return clone(emptyState);
+    const raw = localStorage.getItem(cfg.storeKey);
+    if (!raw) return clone(cfg.emptyState);
     try {
-      return { ...clone(emptyState), ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      const { _v, ...state } = parsed;
+      return { ...clone(cfg.emptyState), ...state };
     } catch {
-      return clone(emptyState);
+      return clone(cfg.emptyState);
     }
   }
 
@@ -33,8 +26,8 @@
     const fallbackState = loadLocalState();
 
     try {
-      const state = await window.LabConSupabase.loadState(clone(emptyState));
-      localStorage.setItem(storeKey, JSON.stringify(state));
+      const state = await window.LabConSupabase.loadState(clone(cfg.emptyState));
+      localStorage.setItem(cfg.storeKey, JSON.stringify({ ...state, _v: cfg.schemaVersion }));
       return state;
     } catch (error) {
       console.warn("Nao foi possivel carregar dados do Supabase. Usando cache local.", error);
@@ -88,7 +81,7 @@
 
   function dayOptions(selectedValue = "all") {
     return option("all", "Todos os dias", selectedValue) +
-      days.map((day) => option(day, day, selectedValue)).join("");
+      cfg.days.map((day) => option(day, day, selectedValue)).join("");
   }
 
   function visibleDesks(state, labFilter) {
@@ -119,7 +112,7 @@
 
   function labOccupancy(state, labId) {
     const desks = state.desks.filter((desk) => desk.labId === labId);
-    const capacity = desks.length * reservationDays.length * reservationSlots;
+    const capacity = desks.length * cfg.reservationDays.length * cfg.reservationSlots.length;
     const used = state.reservations.filter((reservation) => reservation.labId === labId).length;
     const percent = capacity ? Math.round((used / capacity) * 100) : 0;
     return { capacity, used, percent };
@@ -134,7 +127,7 @@
   function reservationsForDesk(state, deskId, dayFilter) {
     return state.reservations
       .filter((reservation) => reservation.deskId === deskId && (dayFilter === "all" || reservation.day === dayFilter))
-      .sort((a, b) => days.indexOf(a.day) - days.indexOf(b.day) || a.start.localeCompare(b.start));
+      .sort((a, b) => cfg.days.indexOf(a.day) - cfg.days.indexOf(b.day) || a.start.localeCompare(b.start));
   }
 
   function insight(state, labFilter, dayFilter) {
@@ -211,8 +204,22 @@
 
       return Object.entries(grouped).map(([userId, items]) => {
         const user = getUser(state, userId);
-        const schedule = items
-          .sort((a, b) => days.indexOf(a.day) - days.indexOf(b.day) || a.start.localeCompare(b.start))
+        const byDay = items.reduce((acc, reservation) => {
+          if (!acc[reservation.day]) {
+            acc[reservation.day] = {
+              day: reservation.day,
+              start: reservation.start,
+              end: reservation.end
+            };
+            return acc;
+          }
+
+          if (reservation.start < acc[reservation.day].start) acc[reservation.day].start = reservation.start;
+          if (reservation.end > acc[reservation.day].end) acc[reservation.day].end = reservation.end;
+          return acc;
+        }, {});
+        const schedule = Object.values(byDay)
+          .sort((a, b) => cfg.days.indexOf(a.day) - cfg.days.indexOf(b.day))
           .map((reservation) => `<span>${escapeHtml(reservation.day)} | ${escapeHtml(reservation.start)} as ${escapeHtml(reservation.end)}</span>`)
           .join("");
 
@@ -224,7 +231,6 @@
     };
 
     const deskCard = (desk) => {
-      const lab = getLab(state, desk.labId);
       const reservations = reservationsForDesk(state, desk.id, dayFilter);
       const status = reservations.length ? "Ocupada" : "Livre";
       const reservationHtml = reservations.length
@@ -235,7 +241,6 @@
         <header>
           <div>
             <div class="desk-name">${escapeHtml(desk.name)}</div>
-            <div class="desk-meta">${escapeHtml(lab?.location || "Sem localizacao")}</div>
           </div>
           <div class="desk-badges">
             <span class="status-chip ${reservations.length ? "busy" : "free"}">${status}</span>
@@ -259,7 +264,7 @@
             <strong>${occupancy.percent}% ocupado</strong>
             <span>${labDesks.length} mesa(s) ocupada(s)</span>
             ${occupancyBar(occupancy.percent)}
-            <button class="button ghost lab-toggle" type="button" data-toggle-lab="${escapeHtml(lab.id)}" aria-expanded="${collapsed ? "false" : "true"}">
+            <button class="button ghost lab-toggle" type="button" data-toggle-lab="${escapeHtml(lab.id)}" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "Expandir" : "Contrair"} ${escapeHtml(lab.name)}">
               ${collapsed ? "Expandir" : "Contrair"}
             </button>
           </div>
@@ -294,9 +299,11 @@
 
   function applyLabVisibility(section, button, collapsed) {
     const grid = section.querySelector(".lab-desk-grid");
+    const labName = section.querySelector("h3")?.textContent || "Laboratorio";
     section.classList.toggle("collapsed", collapsed);
     grid.hidden = collapsed;
     button.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    button.setAttribute("aria-label", `${collapsed ? "Expandir" : "Contrair"} ${labName}`);
     button.textContent = collapsed ? "Expandir" : "Contrair";
   }
 

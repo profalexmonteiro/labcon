@@ -1,46 +1,7 @@
 (function () {
   "use strict";
 
-  const Config = {
-    storeKey: "labcon-state-v1",
-    days: ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"],
-    reservationDays: ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado"],
-    reservationSlots: [
-      ["08:00", "09:00"],
-      ["09:00", "10:00"],
-      ["10:00", "11:00"],
-      ["11:00", "12:00"],
-      ["12:00", "13:00"],
-      ["13:00", "14:00"],
-      ["14:00", "15:00"],
-      ["15:00", "16:00"],
-      ["16:00", "17:00"],
-      ["17:00", "18:00"],
-      ["18:00", "19:00"],
-      ["19:00", "20:00"],
-      ["20:00", "21:00"],
-      ["21:00", "22:00"]
-    ],
-    courses: [
-      "Engenharia da Computacao",
-      "Ciencia da Computacao",
-      "Engenharia de Software",
-      "Inteligencia Artificial",
-      "Ciberseguranca"
-    ],
-    emptyState: {
-      users: [],
-      labs: [],
-      desks: [],
-      reservations: []
-    },
-    permissions: {
-      aluno: ["dashboard", "reservations"],
-      professor: ["dashboard", "reservations", "users", "labs", "desks"],
-      tecnico: ["dashboard", "reservations", "users", "labs", "desks"],
-      administrador: ["dashboard", "reservations", "users", "labs", "desks"]
-    }
-  };
+  const Config = window.LabConConfig;
   const collapsedLabs = new Set();
 
   const Utils = {
@@ -75,6 +36,7 @@
   const Repository = {
     state: loadLocal(),
     isRemoteReady: false,
+    lastUpdatedAt: null,
 
     getState() {
       return this.state;
@@ -82,7 +44,9 @@
 
     async init() {
       try {
-        this.state = await window.LabConSupabase.loadState(Utils.clone(Config.emptyState));
+        const meta = await window.LabConSupabase.loadStateWithMeta(Utils.clone(Config.emptyState));
+        this.state = meta.data;
+        this.lastUpdatedAt = meta.updatedAt;
         this.cacheLocal();
         this.isRemoteReady = true;
       } catch (error) {
@@ -92,7 +56,7 @@
     },
 
     cacheLocal() {
-      localStorage.setItem(Config.storeKey, JSON.stringify(this.state));
+      localStorage.setItem(Config.storeKey, JSON.stringify({ ...this.state, _v: Config.schemaVersion }));
     },
 
     async commit(nextState) {
@@ -100,7 +64,8 @@
       this.cacheLocal();
 
       try {
-        await window.LabConSupabase.saveState(this.state);
+        const updatedAt = await window.LabConSupabase.saveStateAtomic(this.state, this.lastUpdatedAt);
+        this.lastUpdatedAt = updatedAt;
         this.isRemoteReady = true;
       } catch (error) {
         this.isRemoteReady = false;
@@ -164,6 +129,61 @@
 
     async seed() {
       await this.commit(Domain.createSeedState());
+    },
+
+    async upsertAuthUser(authUser) {
+      if (!authUser) return null;
+      const nextState = Utils.clone(this.state);
+      const users = Array.isArray(nextState.users) ? nextState.users : [];
+      const userIndex = users.findIndex((user) => {
+        return user.authUserId === authUser.id || user.email === authUser.email || user.id === `auth-${authUser.id}`;
+      });
+      const existingUser = userIndex >= 0 ? users[userIndex] : null;
+      const metadata = authUser.user_metadata || {};
+      const role = window.LabConSupabase.roleFromUser(authUser);
+      const syncedUser = {
+        ...(existingUser || {}),
+        id: existingUser?.id || `auth-${authUser.id}`,
+        authUserId: authUser.id,
+        email: authUser.email,
+        name: metadata.name || existingUser?.name || authUser.email?.split("@")[0] || "Usuario",
+        role,
+        source: "auth"
+      };
+
+      if (role === "aluno") {
+        syncedUser.level = metadata.level || existingUser?.level || "graduacao";
+        syncedUser.advisorId = metadata.advisorId || existingUser?.advisorId || "";
+        syncedUser.advisorName = metadata.advisorName || existingUser?.advisorName || "";
+        syncedUser.researchProject = metadata.researchProject || existingUser?.researchProject || "";
+        if (syncedUser.level === "graduacao") {
+          syncedUser.course = metadata.course || existingUser?.course || "";
+          syncedUser.program = metadata.program || existingUser?.program || "";
+          delete syncedUser.postgradType;
+        } else {
+          syncedUser.postgradType = metadata.postgradType || existingUser?.postgradType || "";
+          delete syncedUser.course;
+          delete syncedUser.program;
+        }
+      } else {
+        delete syncedUser.level;
+        delete syncedUser.course;
+        delete syncedUser.program;
+        delete syncedUser.postgradType;
+        delete syncedUser.advisorId;
+        delete syncedUser.advisorName;
+        delete syncedUser.researchProject;
+      }
+
+      if (userIndex >= 0) users[userIndex] = syncedUser;
+      else users.push(syncedUser);
+      nextState.users = users;
+
+      if (JSON.stringify(this.state.users) !== JSON.stringify(nextState.users)) {
+        await this.commit(nextState);
+      }
+
+      return syncedUser;
     }
   };
 
@@ -172,7 +192,13 @@
     if (!raw) return Utils.clone(Config.emptyState);
 
     try {
-      return { ...Utils.clone(Config.emptyState), ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      if ((parsed._v ?? 0) !== Config.schemaVersion) {
+        localStorage.removeItem(Config.storeKey);
+        return Utils.clone(Config.emptyState);
+      }
+      const { _v, ...state } = parsed;
+      return { ...Utils.clone(Config.emptyState), ...state };
     } catch {
       return Utils.clone(Config.emptyState);
     }
@@ -194,6 +220,13 @@
 
     getUser(state, id) {
       return state.users.find((user) => user.id === id);
+    },
+
+    getUserByAuth(state, authUser) {
+      if (!authUser) return null;
+      return state.users.find((user) => {
+        return user.authUserId === authUser.id || user.email === authUser.email || user.id === `auth-${authUser.id}`;
+      });
     },
 
     getLab(state, id) {
@@ -356,6 +389,8 @@
         publicUsers: $("#public-users"),
         publicInsight: $("#public-insight"),
         reservationSelectionSummary: $("#reservation-selection-summary"),
+        profileForm: $("#profile-form"),
+        profileSummary: $("#profile-summary"),
         userForm: $("#user-form"),
         labForm: $("#lab-form"),
         deskForm: $("#desk-form"),
@@ -372,13 +407,25 @@
       this.renderDesks(state);
       this.renderReservations(state);
       this.renderDashboard(state);
+      this.renderProfile(state);
       this.applyDynamicStyles();
     },
 
     renderSelects(state) {
       $("#student-course").innerHTML = Config.courses.map((course) => Utils.option(course, course, $("#student-course").value)).join("");
       $("#student-advisor").innerHTML = Templates.professorOptions(state, $("#student-advisor").value);
-      $("#reservation-user").innerHTML = Templates.userOptions(state, $("#reservation-user").value);
+      $("#profile-course").innerHTML = Config.courses.map((course) => Utils.option(course, course, $("#profile-course").value)).join("");
+      $("#profile-advisor").innerHTML = Templates.professorOptions(state, $("#profile-advisor").value);
+      const reservationUser = Controller.currentUser(state);
+      if (Controller.canReserveForOthers()) {
+        $("#reservation-user").innerHTML = Templates.userOptions(state, $("#reservation-user").value || reservationUser?.id || "");
+        $("#reservation-user").disabled = false;
+      } else {
+        $("#reservation-user").innerHTML = reservationUser
+          ? Utils.option(reservationUser.id, reservationUser.name, reservationUser.id)
+          : Utils.option("", "Usuario da sessao nao encontrado", "");
+        $("#reservation-user").disabled = true;
+      }
       $("#reservation-lab").innerHTML = Templates.labOptions(state, $("#reservation-lab").value);
       $("#desk-lab").innerHTML = Templates.labOptions(state, $("#desk-lab").value);
 
@@ -388,6 +435,38 @@
       this.els.dashboardDayFilter.innerHTML = Templates.dayOptions(this.els.dashboardDayFilter.value || "all", true);
       this.updateReservationDeskOptions(state);
       this.renderReservationMatrix(state, this.selectedReservationSchedule());
+    },
+
+    renderProfile(state) {
+      const user = Controller.currentUser(state);
+      if (!user) {
+        if (this.els.profileSummary) this.els.profileSummary.innerHTML = Templates.empty("Usuario da sessao nao encontrado.");
+        return;
+      }
+
+      $("#profile-name").value = user.name || "";
+      $("#profile-email").value = user.email || Controller.session?.user?.email || "";
+      $("#profile-role").value = Domain.roleLabel(user.role);
+      $("#profile-level").value = user.level || "graduacao";
+      $("#profile-course").value = user.course || Config.courses[0];
+      $("#profile-program").value = user.program || "PIBIC";
+      $("#profile-postgrad-type").value = user.postgradType || "Mestrado";
+      $("#profile-advisor").value = user.advisorId || "";
+      $("#profile-research-project").value = user.researchProject || "";
+      this.updateProfileFields(user.role);
+
+      const advisor = user.advisorId ? Domain.getUser(state, user.advisorId)?.name || user.advisorName : "";
+      const details = [
+        `Perfil: ${Domain.roleLabel(user.role)}`,
+        user.email ? `E-mail: ${user.email}` : "",
+        user.level ? `Nivel: ${Domain.levelLabel(user.level)}` : "",
+        user.course ? `Curso: ${user.course}` : "",
+        user.program ? `Vinculo: ${user.program}` : "",
+        user.postgradType ? `Tipo: ${user.postgradType}` : "",
+        advisor ? `Orientador: ${advisor}` : "",
+        user.researchProject ? `Projeto: ${user.researchProject}` : ""
+      ].filter(Boolean);
+      this.els.profileSummary.innerHTML = Templates.listRow(user.name, details, "profile", user.id, "", false);
     },
 
     renderReservationMatrix(state, selectedSchedule) {
@@ -573,16 +652,49 @@
         return;
       }
 
-      list.innerHTML = reservations.map((reservation) => {
-        const user = Domain.getUser(state, reservation.userId);
-        const lab = Domain.getLab(state, reservation.labId);
-        const desk = Domain.getDesk(state, reservation.deskId);
-        return Templates.listRow(
-          `${user?.name || "Usuario removido"} - ${reservation.day}, ${reservation.start} as ${reservation.end}`,
-          [lab?.name || "Laboratorio removido", desk?.name || "Mesa removida"],
-          "reservation",
-          reservation.id
-        );
+      const byUser = reservations.reduce((acc, reservation) => {
+        const userKey = reservation.userId || "removed";
+        if (!acc[userKey]) acc[userKey] = [];
+        acc[userKey].push(reservation);
+        return acc;
+      }, {});
+
+      list.innerHTML = Object.entries(byUser).map(([userId, userReservations]) => {
+        const user = Domain.getUser(state, userId);
+        const byDay = userReservations.reduce((acc, reservation) => {
+          if (!acc[reservation.day]) acc[reservation.day] = [];
+          acc[reservation.day].push(reservation);
+          return acc;
+        }, {});
+
+        const daysHtml = Object.entries(byDay)
+          .sort(([dayA], [dayB]) => Config.days.indexOf(dayA) - Config.days.indexOf(dayB))
+          .map(([day, dayReservations]) => {
+            const entriesHtml = dayReservations
+              .sort((a, b) => a.start.localeCompare(b.start))
+              .map((reservation) => {
+                const lab = Domain.getLab(state, reservation.labId);
+                const desk = Domain.getDesk(state, reservation.deskId);
+                return Templates.reservationScheduleRow(reservation, [
+                  `${reservation.start} as ${reservation.end}`,
+                  lab?.name || "Laboratorio removido",
+                  desk?.name || "Mesa removida"
+                ]);
+              }).join("");
+
+            return `<section class="reservation-day-group">
+              <h4>${Utils.escapeHtml(day)}</h4>
+              <div class="reservation-time-list">${entriesHtml}</div>
+            </section>`;
+          }).join("");
+
+        return `<article class="reservation-user-group">
+          <header>
+            <h3>${Utils.escapeHtml(user?.name || "Usuario removido")}</h3>
+            <span>${userReservations.length} horario(s)</span>
+          </header>
+          ${daysHtml}
+        </article>`;
       }).join("");
     },
 
@@ -608,6 +720,7 @@
       const titles = {
         dashboard: "Painel publico",
         reservations: "Reservas",
+        profile: "Meu cadastro",
         users: "Usuarios",
         labs: "Laboratorios",
         desks: "Mesas"
@@ -626,6 +739,14 @@
       $("#postgrad-fields").classList.toggle("hidden", !isStudent || !isPostgrad);
     },
 
+    updateProfileFields(role = Controller.currentUser()?.role) {
+      const isStudent = role === "aluno";
+      const isPostgrad = $("#profile-level").value === "pos-graduacao";
+      $$(".profile-student-only").forEach((field) => field.classList.toggle("hidden", !isStudent));
+      $("#profile-undergrad-fields").classList.toggle("hidden", !isStudent || isPostgrad);
+      $("#profile-postgrad-fields").classList.toggle("hidden", !isStudent || !isPostgrad);
+    },
+
     resetForm(formId) {
       const form = document.getElementById(formId);
       form.reset();
@@ -634,6 +755,7 @@
       });
       if (formId === "reservation-form") this.renderReservationMatrix(Repository.getState(), []);
       this.updateStudentFields();
+      this.updateProfileFields();
       this.updateReservationDeskOptions(Repository.getState());
     },
 
@@ -641,7 +763,7 @@
       this.els.toast.textContent = message;
       this.els.toast.classList.add("show");
       window.clearTimeout(this.toastTimer);
-      this.toastTimer = window.setTimeout(() => this.els.toast.classList.remove("show"), 2600);
+      this.toastTimer = window.setTimeout(() => this.els.toast.classList.remove("show"), Config.toastDuration);
     },
 
     applyDynamicStyles() {
@@ -697,16 +819,29 @@
       return initial + Config.days.map((day) => Utils.option(day, day, selectedValue)).join("");
     },
 
-    listRow(title, details, type, id, extraHtml = "") {
+    listRow(title, details, type, id, extraHtml = "", showActions = true) {
       return `<article class="list-row">
         <div>
           <div class="row-title">${Utils.escapeHtml(title)}</div>
           <div class="row-meta">${details.map((detail) => `<span>${Utils.escapeHtml(detail)}</span>`).join("")}</div>
           ${extraHtml}
         </div>
-        <div class="row-actions">
+        <div class="row-actions ${showActions ? "" : "hidden"}">
           <button class="button ghost" type="button" data-edit="${type}" data-id="${id}">Editar</button>
           <button class="button danger" type="button" data-delete="${type}" data-id="${id}">Excluir</button>
+        </div>
+      </article>`;
+    },
+
+    reservationScheduleRow(reservation, details) {
+      return `<article class="reservation-schedule-row">
+        <div>
+          <strong>${Utils.escapeHtml(details[0])}</strong>
+          <div class="row-meta">${details.slice(1).map((detail) => `<span>${Utils.escapeHtml(detail)}</span>`).join("")}</div>
+        </div>
+        <div class="row-actions">
+          <button class="button ghost" type="button" data-edit="reservation" data-id="${Utils.escapeHtml(reservation.id)}">Editar</button>
+          <button class="button danger" type="button" data-delete="reservation" data-id="${Utils.escapeHtml(reservation.id)}">Excluir</button>
         </div>
       </article>`;
     },
@@ -725,7 +860,6 @@
     },
 
     deskCard(state, desk, dayFilter) {
-      const lab = Domain.getLab(state, desk.labId);
       const reservations = Domain.reservationsForDesk(state, desk.id, dayFilter);
       const status = reservations.length ? "Ocupada" : "Livre";
       const reservationsHtml = reservations.length
@@ -736,7 +870,6 @@
         <header>
           <div>
             <div class="desk-name">${Utils.escapeHtml(desk.name)}</div>
-            <div class="desk-meta">${Utils.escapeHtml(lab?.location || "Sem localizacao")}</div>
           </div>
           <div class="desk-badges">
             <span class="status-chip ${reservations.length ? "busy" : "free"}">${Utils.escapeHtml(status)}</span>
@@ -755,8 +888,22 @@
 
       return Object.entries(grouped).map(([userId, items]) => {
         const user = Domain.getUser(state, userId);
-        const schedule = items
-          .sort((a, b) => Config.days.indexOf(a.day) - Config.days.indexOf(b.day) || a.start.localeCompare(b.start))
+        const byDay = items.reduce((acc, reservation) => {
+          if (!acc[reservation.day]) {
+            acc[reservation.day] = {
+              day: reservation.day,
+              start: reservation.start,
+              end: reservation.end
+            };
+            return acc;
+          }
+
+          if (reservation.start < acc[reservation.day].start) acc[reservation.day].start = reservation.start;
+          if (reservation.end > acc[reservation.day].end) acc[reservation.day].end = reservation.end;
+          return acc;
+        }, {});
+        const schedule = Object.values(byDay)
+          .sort((a, b) => Config.days.indexOf(a.day) - Config.days.indexOf(b.day))
           .map((reservation) => `<span>${Utils.escapeHtml(reservation.day)} | ${Utils.escapeHtml(reservation.start)} as ${Utils.escapeHtml(reservation.end)}</span>`)
           .join("");
 
@@ -794,24 +941,31 @@
 
   function applyLabVisibility(section, button, collapsed) {
     const grid = section.querySelector(".lab-desk-grid");
+    const labName = section.querySelector("h3")?.textContent || "Laboratorio";
     section.classList.toggle("collapsed", collapsed);
     grid.hidden = collapsed;
     button.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    button.setAttribute("aria-label", `${collapsed ? "Expandir" : "Contrair"} ${labName}`);
     button.textContent = collapsed ? "Expandir" : "Contrair";
   }
 
   const Controller = {
     sessionRole: "aluno",
+    session: null,
+    currentUserId: "",
 
     async init() {
       View.init();
       const session = await window.LabConSupabase.requireSession();
       if (!session) return;
+      this.session = session;
       this.sessionRole = window.LabConSupabase.roleFromUser(session.user);
       this.bindEvents();
-      this.applyPermissions();
       View.updateStudentFields();
       await Repository.init();
+      const currentUser = await Repository.upsertAuthUser(session.user);
+      this.currentUserId = currentUser?.id || "";
+      this.applyPermissions();
       View.render(Repository.getState());
     },
 
@@ -825,6 +979,14 @@
 
     canAccess(view) {
       return this.allowedViews().includes(view);
+    },
+
+    canReserveForOthers() {
+      return ["administrador", "professor"].includes(this.currentRole());
+    },
+
+    currentUser(state = Repository.getState()) {
+      return Domain.getUser(state, this.currentUserId) || Domain.getUserByAuth(state, this.session?.user);
     },
 
     applyPermissions() {
@@ -852,12 +1014,14 @@
         View.showView(item.dataset.view);
       }));
       View.els.userForm.addEventListener("submit", (event) => this.saveUser(event));
+      View.els.profileForm.addEventListener("submit", (event) => this.saveProfile(event));
       View.els.labForm.addEventListener("submit", (event) => this.saveLab(event));
       View.els.deskForm.addEventListener("submit", (event) => this.saveDesk(event));
       View.els.reservationForm.addEventListener("submit", (event) => this.saveReservation(event));
 
       $("#user-role").addEventListener("change", () => View.updateStudentFields());
       $("#student-level").addEventListener("change", () => View.updateStudentFields());
+      $("#profile-level").addEventListener("change", () => View.updateProfileFields());
       $("#reservation-lab").addEventListener("change", () => {
         const state = Repository.getState();
         View.updateReservationDeskOptions(state);
@@ -926,9 +1090,13 @@
         await action();
         View.render(Repository.getState());
         View.toast(successMessage);
-      } catch {
+      } catch (error) {
         View.render(Repository.getState());
-        View.toast("Dados salvos localmente, mas nao sincronizados no Supabase.");
+        if (error.code === "CONFLICT") {
+          View.toast("Conflito detectado. Recarregue a pagina e tente novamente.");
+        } else {
+          View.toast("Dados salvos localmente, mas nao sincronizados no Supabase.");
+        }
       }
     },
 
@@ -966,6 +1134,81 @@
 
       await this.persist(() => Repository.upsert("users", user), "Usuario salvo.");
       View.resetForm("user-form");
+    },
+
+    async saveProfile(event) {
+      event.preventDefault();
+      const state = Repository.getState();
+      const currentUser = this.currentUser(state);
+      if (!currentUser) {
+        View.toast("Nao foi possivel identificar o usuario logado.");
+        return;
+      }
+
+      const user = {
+        ...currentUser,
+        name: $("#profile-name").value.trim(),
+        email: currentUser.email || this.session?.user?.email || "",
+        role: currentUser.role
+      };
+
+      if (user.role === "aluno") {
+        user.level = $("#profile-level").value;
+        user.advisorId = $("#profile-advisor").value;
+        user.researchProject = $("#profile-research-project").value.trim();
+        if (user.level === "graduacao") {
+          user.course = $("#profile-course").value;
+          user.program = $("#profile-program").value;
+          delete user.postgradType;
+        } else {
+          user.postgradType = $("#profile-postgrad-type").value;
+          delete user.course;
+          delete user.program;
+        }
+        user.advisorName = Domain.getUser(state, user.advisorId)?.name || user.advisorName || "";
+      } else {
+        delete user.level;
+        delete user.course;
+        delete user.program;
+        delete user.postgradType;
+        delete user.advisorId;
+        delete user.advisorName;
+        delete user.researchProject;
+      }
+
+      const error = Domain.validateUser(state, user);
+      if (error) {
+        View.toast(error);
+        return;
+      }
+
+      const metadata = {
+        ...(this.session?.user?.user_metadata || {}),
+        name: user.name,
+        role: user.role
+      };
+      if (user.role === "aluno") {
+        metadata.level = user.level;
+        metadata.advisorId = user.advisorId;
+        metadata.advisorName = user.advisorName;
+        metadata.researchProject = user.researchProject || "";
+        if (user.level === "graduacao") {
+          metadata.course = user.course;
+          metadata.program = user.program;
+          delete metadata.postgradType;
+        } else {
+          metadata.postgradType = user.postgradType;
+          delete metadata.course;
+          delete metadata.program;
+        }
+      }
+
+      await this.persist(async () => {
+        const authUser = await window.LabConSupabase.updateUserMetadata(metadata);
+        if (authUser) this.session.user = authUser;
+        Repository.lastUpdatedAt = null;
+        await Repository.upsert("users", user);
+      }, "Cadastro atualizado.");
     },
 
     async saveLab(event) {
@@ -1016,9 +1259,14 @@
     async saveReservation(event) {
       event.preventDefault();
       const state = Repository.getState();
+      const currentUser = this.currentUser(state);
+      if (!currentUser) {
+        View.toast("Nao foi possivel identificar o usuario logado para a reserva.");
+        return;
+      }
       const reservation = {
         id: $("#reservation-id").value || Utils.uid("reservation"),
-        userId: $("#reservation-user").value,
+        userId: this.canReserveForOthers() ? $("#reservation-user").value : currentUser.id,
         labId: $("#reservation-lab").value,
         deskId: $("#reservation-desk").value
       };
@@ -1105,10 +1353,15 @@
       const state = Repository.getState();
       const reservation = state.reservations.find((entry) => entry.id === id);
       if (!reservation) return;
+      const currentUser = this.currentUser(state);
+      if (!this.canReserveForOthers() && (!currentUser || reservation.userId !== currentUser.id)) {
+        View.toast("Voce so pode editar reservas feitas em seu proprio nome.");
+        return;
+      }
 
       View.showView("reservations");
       $("#reservation-id").value = reservation.id;
-      $("#reservation-user").value = reservation.userId;
+      $("#reservation-user").value = this.canReserveForOthers() ? reservation.userId : currentUser.id;
       $("#reservation-lab").value = reservation.labId;
       View.updateReservationDeskOptions(state);
       $("#reservation-desk").value = reservation.deskId;
@@ -1125,6 +1378,15 @@
       if (requiredView && !this.canAccess(requiredView)) {
         View.toast("Seu perfil nao possui acesso a esta acao.");
         return;
+      }
+      if (type === "reservation") {
+        const state = Repository.getState();
+        const reservation = state.reservations.find((entry) => entry.id === id);
+        const currentUser = this.currentUser(state);
+        if (!this.canReserveForOthers() && (!reservation || !currentUser || reservation.userId !== currentUser.id)) {
+          View.toast("Voce so pode excluir reservas feitas em seu proprio nome.");
+          return;
+        }
       }
       const names = {
         user: "usuario",

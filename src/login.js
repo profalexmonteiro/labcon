@@ -1,15 +1,10 @@
 (function () {
   "use strict";
 
+  const cfg = window.LabConConfig;
   const tabs = Array.from(document.querySelectorAll("[data-auth-view]"));
   const panels = Array.from(document.querySelectorAll("[data-auth-panel]"));
   const toast = document.querySelector("#toast");
-  const emptyState = {
-    users: [],
-    labs: [],
-    desks: [],
-    reservations: []
-  };
   let professors = [];
 
   function showPanel(view) {
@@ -21,7 +16,7 @@
     toast.textContent = message;
     toast.classList.add("show");
     window.clearTimeout(showToast.timer);
-    showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2600);
+    showToast.timer = window.setTimeout(() => toast.classList.remove("show"), cfg.toastDuration);
   }
 
   function escapeHtml(value) {
@@ -46,24 +41,44 @@
     return document.querySelector("#register-role").value;
   }
 
-  function updateRegisterFields() {
-    const advisorField = document.querySelector("#register-advisor")?.closest(".field");
-    const advisorSelect = document.querySelector("#register-advisor");
-    const needsAdvisor = selectedRegisterRole() === "aluno";
-    if (!advisorField || !advisorSelect) return;
+  function selectedRegisterLevel() {
+    return document.querySelector("#register-level").value;
+  }
 
-    advisorField.classList.toggle("hidden", !needsAdvisor);
-    advisorSelect.required = needsAdvisor;
-    if (!needsAdvisor) advisorSelect.value = "";
+  function fillRegisterCourses() {
+    const selectedValue = document.querySelector("#register-course").value;
+    document.querySelector("#register-course").innerHTML = cfg.courses
+      .map((course) => `<option value="${escapeHtml(course)}" ${course === selectedValue ? "selected" : ""}>${escapeHtml(course)}</option>`)
+      .join("");
+  }
+
+  function updateRegisterFields() {
+    const advisorSelect = document.querySelector("#register-advisor");
+    const isStudent = selectedRegisterRole() === "aluno";
+    const isPostgrad = selectedRegisterLevel() === "pos-graduacao";
+    if (!advisorSelect) return;
+
+    document.querySelectorAll(".register-student-only")
+      .forEach((field) => field.classList.toggle("hidden", !isStudent));
+    document.querySelector("#register-undergrad-fields").classList.toggle("hidden", !isStudent || isPostgrad);
+    document.querySelector("#register-postgrad-fields").classList.toggle("hidden", !isStudent || !isPostgrad);
+    advisorSelect.required = isStudent;
+    document.querySelector("#register-level").required = isStudent;
+    document.querySelector("#register-course").required = isStudent && !isPostgrad;
+    document.querySelector("#register-program").required = isStudent && !isPostgrad;
+    document.querySelector("#register-postgrad-type").required = isStudent && isPostgrad;
+    if (!isStudent) advisorSelect.value = "";
   }
 
   function loadLocalState() {
-    const raw = localStorage.getItem("labcon-state-v1");
-    if (!raw) return { ...emptyState };
+    const raw = localStorage.getItem(cfg.storeKey);
+    if (!raw) return { ...cfg.emptyState };
     try {
-      return { ...emptyState, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      const { _v, ...state } = parsed;
+      return { ...cfg.emptyState, ...state };
     } catch {
-      return { ...emptyState };
+      return { ...cfg.emptyState };
     }
   }
 
@@ -77,7 +92,7 @@
     try {
       const fallbackState = loadLocalState();
       const state = await window.LabConSupabase.loadState(fallbackState);
-      localStorage.setItem("labcon-state-v1", JSON.stringify(state));
+      localStorage.setItem(cfg.storeKey, JSON.stringify({ ...state, _v: cfg.schemaVersion }));
       professors = sortByName(state.users.filter((user) => user.role === "professor"));
     } catch (error) {
       console.warn("Nao foi possivel carregar professores do Supabase. Usando cache local.", error);
@@ -95,6 +110,7 @@
   });
 
   document.querySelector("#register-role").addEventListener("change", updateRegisterFields);
+  document.querySelector("#register-level").addEventListener("change", updateRegisterFields);
 
   function authClient() {
     if (!window.LabConSupabase?.client) {
@@ -132,10 +148,7 @@
     const advisorId = document.querySelector("#register-advisor").value;
     const advisor = professors.find((professor) => professor.id === advisorId);
     const password = document.querySelector("#register-password").value;
-    const metadata = {
-      name,
-      role
-    };
+    const metadata = { name, role };
 
     if (role === "aluno" && !advisor) {
       showToast("Selecione um professor orientador.");
@@ -143,16 +156,23 @@
     }
 
     if (role === "aluno") {
+      const level = selectedRegisterLevel();
+      metadata.level = level;
       metadata.advisorId = advisor.id;
       metadata.advisorName = advisor.name;
+      metadata.researchProject = document.querySelector("#register-research-project").value.trim();
+      if (level === "graduacao") {
+        metadata.course = document.querySelector("#register-course").value;
+        metadata.program = document.querySelector("#register-program").value;
+      } else {
+        metadata.postgradType = document.querySelector("#register-postgrad-type").value;
+      }
     }
 
     const { data, error } = await auth.signUp({
       email,
       password,
-      options: {
-        data: metadata
-      }
+      options: { data: metadata }
     });
 
     if (error) {
@@ -189,5 +209,6 @@
   });
 
   loadProfessors();
+  fillRegisterCourses();
   updateRegisterFields();
 }());

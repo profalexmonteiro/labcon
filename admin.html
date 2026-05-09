@@ -24,6 +24,7 @@
         <nav class="nav-list">
           <button class="nav-item active" type="button" data-view="dashboard">Painel publico</button>
           <button class="nav-item" type="button" data-view="reservations">Reservas</button>
+          <button class="nav-item" type="button" data-view="profile">Meu cadastro</button>
           <div class="nav-group">
             <div class="nav-group-title">Cadastro</div>
             <div class="nav-sublist">
@@ -125,6 +126,75 @@
                 <select id="reservation-list-filter" aria-label="Filtrar reservas por laboratorio"></select>
               </div>
               <div id="reservations-list" class="table-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="profile-view" aria-labelledby="view-title">
+          <div class="work-layout">
+            <form class="panel form-panel" id="profile-form">
+              <h2>Meu cadastro</h2>
+              <div class="field">
+                <label for="profile-name">Nome completo</label>
+                <input id="profile-name" type="text" required autocomplete="name" minlength="3" maxlength="120">
+              </div>
+              <div class="split-fields two">
+                <div class="field">
+                  <label for="profile-email">E-mail</label>
+                  <input id="profile-email" type="email" readonly>
+                </div>
+                <div class="field">
+                  <label for="profile-role">Perfil</label>
+                  <input id="profile-role" type="text" readonly>
+                </div>
+              </div>
+              <div class="split-fields two profile-student-only">
+                <div class="field">
+                  <label for="profile-level">Nivel</label>
+                  <select id="profile-level">
+                    <option value="graduacao">Graduacao</option>
+                    <option value="pos-graduacao">Pos-graduacao</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="profile-advisor">Orientador</label>
+                  <select id="profile-advisor"></select>
+                </div>
+              </div>
+              <div class="profile-student-only" id="profile-undergrad-fields">
+                <div class="field">
+                  <label for="profile-course">Curso</label>
+                  <select id="profile-course"></select>
+                </div>
+                <div class="field">
+                  <label for="profile-program">Vinculo</label>
+                  <select id="profile-program">
+                    <option value="PIBIC">PIBIC</option>
+                    <option value="PIID">PIID</option>
+                    <option value="Voluntario">Voluntario</option>
+                  </select>
+                </div>
+              </div>
+              <div class="profile-student-only hidden" id="profile-postgrad-fields">
+                <div class="field">
+                  <label for="profile-postgrad-type">Tipo</label>
+                  <select id="profile-postgrad-type">
+                    <option value="Mestrado">Mestrado</option>
+                    <option value="Doutorado">Doutorado</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field profile-student-only">
+                <label for="profile-research-project">Projeto de Pesquisa</label>
+                <input id="profile-research-project" type="text" maxlength="160">
+              </div>
+              <div class="form-actions">
+                <button class="button primary" type="submit">Salvar meu cadastro</button>
+              </div>
+            </form>
+            <div class="panel">
+              <h2>Dados da conta</h2>
+              <div id="profile-summary" class="table-list"></div>
             </div>
           </div>
         </section>
@@ -259,6 +329,7 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.4/dist/umd/supabase.js" integrity="sha384-7SfFUrg31wOnGWBLLniKFCNmCSguYA5wI1WPDOt7kP/mom4R9/0pwghVEnv0uwYP" crossorigin="anonymous"></script>
+    <script src="src/config.js"></script>
     <script src="src/supabase.js"></script>
     <script src="src/app.js"></script>
   </body>
