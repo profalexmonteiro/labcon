@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://qbnxsssutkuiitqishel.supabase.co; img-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
+    <title>LabCon | Painel Publico</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="public-page">
+      <header class="public-topbar">
+        <div class="brand public-brand">
+          <span class="brand-mark">LC</span>
+          <div>
+            <strong>LabCon</strong>
+            <small>Painel publico de laboratorios</small>
+          </div>
+        </div>
+        <a class="button primary login-button" href="login.html">Entrar no sistema</a>
+      </header>
+
+      <section class="public-hero" aria-labelledby="view-title">
+        <div>
+          <p class="eyebrow">Gerenciamento de laboratorios de pesquisa</p>
+          <h1 id="view-title">Painel publico</h1>
+        </div>
+        <div class="topbar-actions">
+          <select id="public-lab-filter" aria-label="Filtrar laboratorio do painel"></select>
+          <select id="dashboard-day-filter" aria-label="Filtrar dia no painel"></select>
+        </div>
+      </section>
+
+      <section class="info-strip" id="public-insight" aria-live="polite"></section>
+
+      <section class="metrics-grid" aria-label="Resumo dos laboratorios">
+        <article class="metric">
+          <span>Laboratorios</span>
+          <strong id="metric-labs">0</strong>
+        </article>
+        <article class="metric">
+          <span>Mesas</span>
+          <strong id="metric-desks">0</strong>
+        </article>
+        <article class="metric">
+          <span>Pesquisadores</span>
+          <strong id="metric-users">0</strong>
+        </article>
+        <article class="metric">
+          <span>Reservas ativas</span>
+          <strong id="metric-reservations">0</strong>
+        </article>
+      </section>
+
+      <section aria-labelledby="occupancy-title">
+        <div class="section-heading">
+          <h2 id="occupancy-title">Ocupacao por laboratorio</h2>
+        </div>
+        <div id="public-users" class="public-users"></div>
+        <div id="public-board" class="board-grid"></div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.4/dist/umd/supabase.js" integrity="sha384-7SfFUrg31wOnGWBLLniKFCNmCSguYA5wI1WPDOt7kP/mom4R9/0pwghVEnv0uwYP" crossorigin="anonymous"></script>
+    <script src="supabase.js"></script>
+    <script src="public.js"></script>
+  </body>
+</html>
