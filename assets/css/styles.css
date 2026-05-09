@@ -620,6 +620,39 @@ select:focus {
   font-size: 0.9rem;
 }
 
+.profile-photo-field {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-photo-preview {
+  width: 112px;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fafbf7;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.profile-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-photo-controls {
+  display: grid;
+  gap: 10px;
+}
+
 .hidden {
   display: none !important;
 }
@@ -690,6 +723,13 @@ select:focus {
   padding: 14px;
 }
 
+.desk-lab-group {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+}
+
 .reservation-user-group > header {
   display: flex;
   align-items: center;
@@ -699,12 +739,28 @@ select:focus {
   padding-bottom: 10px;
 }
 
+.desk-lab-group > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
 .reservation-user-group h3,
-.reservation-day-group h4 {
+.reservation-day-group h4,
+.desk-lab-group h3 {
   margin: 0;
 }
 
 .reservation-user-group > header span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.desk-lab-group > header span {
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 800;
@@ -726,6 +782,12 @@ select:focus {
   gap: 8px;
 }
 
+.desk-lab-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
 .reservation-schedule-row {
   background: #f8faf5;
   border-left: 4px solid var(--primary);
@@ -736,7 +798,21 @@ select:focus {
   padding: 10px;
 }
 
+.desk-schedule-row {
+  background: #f8faf5;
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  padding: 10px;
+}
+
 .reservation-schedule-row strong {
+  display: block;
+}
+
+.desk-schedule-row strong {
   display: block;
 }
 
@@ -1056,11 +1132,19 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
+  .profile-photo-field {
+    grid-template-columns: 1fr;
+  }
+
   .list-row {
     grid-template-columns: 1fr;
   }
 
   .reservation-schedule-row {
+    grid-template-columns: 1fr;
+  }
+
+  .desk-schedule-row {
     grid-template-columns: 1fr;
   }
 }

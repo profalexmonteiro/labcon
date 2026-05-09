@@ -68,6 +68,12 @@ begin
     'advisorId', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'advisorId' else null end,
     'advisorName', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'advisorName' else null end,
     'researchProject', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'researchProject' else null end,
+    'entryDate', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'entryDate' else null end,
+    'qualificationDeadline', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'qualificationDeadline' else null end,
+    'advisorMeetingUrl', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'advisorMeetingUrl' else null end,
+    'articleUrl', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'articleUrl' else null end,
+    'qualificationUrl', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'qualificationUrl' else null end,
+    'thesisUrl', case when user_role = 'aluno' then new.raw_user_meta_data ->> 'thesisUrl' else null end,
     'source', 'auth'
   ));
 

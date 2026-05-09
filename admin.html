@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://awoyslrpmbygibyvjnpb.supabase.co; img-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://awoyslrpmbygibyvjnpb.supabase.co; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
     <meta name="referrer" content="no-referrer">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
@@ -134,6 +134,20 @@
           <div class="work-layout">
             <form class="panel form-panel" id="profile-form">
               <h2>Meu cadastro</h2>
+              <div class="profile-photo-field">
+                <input id="profile-photo-data" type="hidden">
+                <div class="profile-photo-preview" aria-label="Foto do usuario">
+                  <img id="profile-photo-preview" class="hidden" alt="Foto do usuario">
+                  <span id="profile-photo-placeholder">Sem foto</span>
+                </div>
+                <div class="profile-photo-controls">
+                  <div class="field">
+                    <label for="profile-photo">Foto</label>
+                    <input id="profile-photo" type="file" accept="image/png,image/jpeg,image/webp">
+                  </div>
+                  <button class="button ghost" type="button" id="profile-photo-remove">Remover foto</button>
+                </div>
+              </div>
               <div class="field">
                 <label for="profile-name">Nome completo</label>
                 <input id="profile-name" type="text" required autocomplete="name" minlength="3" maxlength="120">
@@ -188,6 +202,32 @@
                 <label for="profile-research-project">Projeto de Pesquisa</label>
                 <input id="profile-research-project" type="text" maxlength="160">
               </div>
+              <div class="split-fields two profile-student-only">
+                <div class="field">
+                  <label for="profile-entry-date">Data de entrada</label>
+                  <input id="profile-entry-date" type="date">
+                </div>
+                <div class="field">
+                  <label for="profile-qualification-deadline">Data limite de Qualificacao</label>
+                  <input id="profile-qualification-deadline" type="date">
+                </div>
+              </div>
+              <div class="field profile-student-only">
+                <label for="profile-advisor-meeting-url">Link de reuniao com orientador</label>
+                <input id="profile-advisor-meeting-url" type="url" maxlength="240" placeholder="https://">
+              </div>
+              <div class="field profile-student-only">
+                <label for="profile-article-url">Link de Artigo / Journal</label>
+                <input id="profile-article-url" type="url" maxlength="240" placeholder="https://">
+              </div>
+              <div class="field profile-student-only">
+                <label for="profile-qualification-url">Link da Qualificacao</label>
+                <input id="profile-qualification-url" type="url" maxlength="240" placeholder="https://">
+              </div>
+              <div class="field profile-student-only">
+                <label for="profile-thesis-url">Link da Dissertacao / Tese</label>
+                <input id="profile-thesis-url" type="url" maxlength="240" placeholder="https://">
+              </div>
               <div class="form-actions">
                 <button class="button primary" type="submit">Salvar meu cadastro</button>
               </div>
@@ -207,6 +247,16 @@
               <div class="field">
                 <label for="user-name">Nome completo</label>
                 <input id="user-name" type="text" required autocomplete="name" minlength="3" maxlength="120">
+              </div>
+              <div class="split-fields two">
+                <div class="field">
+                  <label for="user-email">E-mail</label>
+                  <input id="user-email" type="email" autocomplete="email" maxlength="160">
+                </div>
+                <div class="field">
+                  <label for="user-password">Senha</label>
+                  <input id="user-password" type="password" autocomplete="new-password" minlength="6" maxlength="72">
+                </div>
               </div>
               <div class="split-fields two">
                 <div class="field">

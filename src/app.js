@@ -148,6 +148,7 @@
         email: authUser.email,
         name: metadata.name || existingUser?.name || authUser.email?.split("@")[0] || "Usuario",
         role,
+        photoDataUrl: metadata.photoDataUrl || existingUser?.photoDataUrl || "",
         source: "auth"
       };
 
@@ -156,6 +157,12 @@
         syncedUser.advisorId = metadata.advisorId || existingUser?.advisorId || "";
         syncedUser.advisorName = metadata.advisorName || existingUser?.advisorName || "";
         syncedUser.researchProject = metadata.researchProject || existingUser?.researchProject || "";
+        syncedUser.entryDate = metadata.entryDate || existingUser?.entryDate || "";
+        syncedUser.qualificationDeadline = metadata.qualificationDeadline || existingUser?.qualificationDeadline || "";
+        syncedUser.advisorMeetingUrl = metadata.advisorMeetingUrl || existingUser?.advisorMeetingUrl || "";
+        syncedUser.articleUrl = metadata.articleUrl || existingUser?.articleUrl || "";
+        syncedUser.qualificationUrl = metadata.qualificationUrl || existingUser?.qualificationUrl || "";
+        syncedUser.thesisUrl = metadata.thesisUrl || existingUser?.thesisUrl || "";
         if (syncedUser.level === "graduacao") {
           syncedUser.course = metadata.course || existingUser?.course || "";
           syncedUser.program = metadata.program || existingUser?.program || "";
@@ -173,6 +180,12 @@
         delete syncedUser.advisorId;
         delete syncedUser.advisorName;
         delete syncedUser.researchProject;
+        delete syncedUser.entryDate;
+        delete syncedUser.qualificationDeadline;
+        delete syncedUser.advisorMeetingUrl;
+        delete syncedUser.articleUrl;
+        delete syncedUser.qualificationUrl;
+        delete syncedUser.thesisUrl;
       }
 
       if (userIndex >= 0) users[userIndex] = syncedUser;
@@ -304,6 +317,13 @@
 
     validateUser(state, user) {
       if (!user.name) return "Informe o nome do usuario.";
+      if (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) return "Informe um e-mail valido.";
+      if (user.email) {
+        const emailOwner = state.users.find((entry) => {
+          return entry.id !== user.id && entry.email && entry.email.toLowerCase() === user.email.toLowerCase();
+        });
+        if (emailOwner) return "Ja existe um usuario cadastrado com este e-mail.";
+      }
       if (user.role === "aluno" && !user.advisorId) return "Cadastre e selecione um professor orientador.";
       if (user.role === "aluno" && !Domain.getUser(state, user.advisorId)) return "O orientador selecionado nao existe.";
       return "";
@@ -453,20 +473,50 @@
       $("#profile-postgrad-type").value = user.postgradType || "Mestrado";
       $("#profile-advisor").value = user.advisorId || "";
       $("#profile-research-project").value = user.researchProject || "";
+      $("#profile-entry-date").value = user.entryDate || "";
+      $("#profile-qualification-deadline").value = user.qualificationDeadline || "";
+      $("#profile-advisor-meeting-url").value = user.advisorMeetingUrl || "";
+      $("#profile-article-url").value = user.articleUrl || "";
+      $("#profile-qualification-url").value = user.qualificationUrl || "";
+      $("#profile-thesis-url").value = user.thesisUrl || "";
+      $("#profile-photo-data").value = user.photoDataUrl || "";
+      this.renderProfilePhoto(user.photoDataUrl || "");
       this.updateProfileFields(user.role);
 
       const advisor = user.advisorId ? Domain.getUser(state, user.advisorId)?.name || user.advisorName : "";
       const details = [
         `Perfil: ${Domain.roleLabel(user.role)}`,
         user.email ? `E-mail: ${user.email}` : "",
+        user.photoDataUrl ? "Foto cadastrada" : "",
         user.level ? `Nivel: ${Domain.levelLabel(user.level)}` : "",
         user.course ? `Curso: ${user.course}` : "",
         user.program ? `Vinculo: ${user.program}` : "",
         user.postgradType ? `Tipo: ${user.postgradType}` : "",
         advisor ? `Orientador: ${advisor}` : "",
-        user.researchProject ? `Projeto: ${user.researchProject}` : ""
+        user.researchProject ? `Projeto: ${user.researchProject}` : "",
+        user.entryDate ? `Entrada: ${user.entryDate}` : "",
+        user.qualificationDeadline ? `Limite qualificacao: ${user.qualificationDeadline}` : "",
+        user.advisorMeetingUrl ? `Reuniao: ${user.advisorMeetingUrl}` : "",
+        user.articleUrl ? `Artigo / Journal: ${user.articleUrl}` : "",
+        user.qualificationUrl ? `Qualificacao: ${user.qualificationUrl}` : "",
+        user.thesisUrl ? `Dissertacao / Tese: ${user.thesisUrl}` : ""
       ].filter(Boolean);
       this.els.profileSummary.innerHTML = Templates.listRow(user.name, details, "profile", user.id, "", false);
+    },
+
+    renderProfilePhoto(photoDataUrl) {
+      const image = $("#profile-photo-preview");
+      const placeholder = $("#profile-photo-placeholder");
+      if (!image || !placeholder) return;
+      if (photoDataUrl) {
+        image.src = photoDataUrl;
+        image.classList.remove("hidden");
+        placeholder.classList.add("hidden");
+        return;
+      }
+      image.removeAttribute("src");
+      image.classList.add("hidden");
+      placeholder.classList.remove("hidden");
     },
 
     renderReservationMatrix(state, selectedSchedule) {
@@ -594,6 +644,7 @@
         const advisor = user.advisorId ? Domain.getUser(state, user.advisorId)?.name : "";
         const details = [
           Domain.roleLabel(user.role),
+          user.email ? `E-mail: ${user.email}` : "",
           user.level ? Domain.levelLabel(user.level) : "",
           user.course,
           user.program,
@@ -635,10 +686,29 @@
         return;
       }
 
-      list.innerHTML = desks.map((desk) => {
-        const lab = Domain.getLab(state, desk.labId);
-        const reservations = state.reservations.filter((reservation) => reservation.deskId === desk.id).length;
-        return Templates.listRow(desk.name, [lab?.name || "Laboratorio removido", `${reservations} reserva(s)`], "desk", desk.id);
+      const byLab = desks.reduce((acc, desk) => {
+        const labKey = desk.labId || "removed";
+        if (!acc[labKey]) acc[labKey] = [];
+        acc[labKey].push(desk);
+        return acc;
+      }, {});
+
+      list.innerHTML = Object.entries(byLab).map(([labId, labDesks]) => {
+        const lab = Domain.getLab(state, labId);
+        const desksHtml = labDesks
+          .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+          .map((desk) => {
+            const reservations = state.reservations.filter((reservation) => reservation.deskId === desk.id).length;
+            return Templates.deskScheduleRow(desk, [`${reservations} reserva(s)`]);
+          }).join("");
+
+        return `<article class="desk-lab-group">
+          <header>
+            <h3>${Utils.escapeHtml(lab?.name || "Laboratorio removido")}</h3>
+            <span>${lab?.location ? Utils.escapeHtml(lab.location) : `${labDesks.length} mesa(s)`}</span>
+          </header>
+          <div class="desk-lab-list">${desksHtml}</div>
+        </article>`;
       }).join("");
     },
 
@@ -846,6 +916,19 @@
       </article>`;
     },
 
+    deskScheduleRow(desk, details) {
+      return `<article class="desk-schedule-row">
+        <div>
+          <strong>${Utils.escapeHtml(desk.name)}</strong>
+          <div class="row-meta">${details.map((detail) => `<span>${Utils.escapeHtml(detail)}</span>`).join("")}</div>
+        </div>
+        <div class="row-actions">
+          <button class="button ghost" type="button" data-edit="desk" data-id="${Utils.escapeHtml(desk.id)}">Editar</button>
+          <button class="button danger" type="button" data-delete="desk" data-id="${Utils.escapeHtml(desk.id)}">Excluir</button>
+        </div>
+      </article>`;
+    },
+
     occupancyBar(percent) {
       return `<div class="occupancy-bar" aria-label="Ocupacao ${percent}%">
         <span data-occupancy-width="${Math.max(0, Math.min(percent, 100))}"></span>
@@ -1022,6 +1105,8 @@
       $("#user-role").addEventListener("change", () => View.updateStudentFields());
       $("#student-level").addEventListener("change", () => View.updateStudentFields());
       $("#profile-level").addEventListener("change", () => View.updateProfileFields());
+      $("#profile-photo").addEventListener("change", (event) => this.loadProfilePhoto(event));
+      $("#profile-photo-remove").addEventListener("click", () => this.removeProfilePhoto());
       $("#reservation-lab").addEventListener("change", () => {
         const state = Repository.getState();
         View.updateReservationDeskOptions(state);
@@ -1111,6 +1196,7 @@
       const user = {
         id: $("#user-id").value || Utils.uid("user"),
         name: $("#user-name").value.trim(),
+        email: $("#user-email").value.trim(),
         role
       };
 
@@ -1132,8 +1218,46 @@
         return;
       }
 
-      await this.persist(() => Repository.upsert("users", user), "Usuario salvo.");
+      const password = $("#user-password").value;
+      await this.persist(() => Repository.upsert("users", user), password ? "Usuario salvo. A senha nao foi armazenada no painel." : "Usuario salvo.");
       View.resetForm("user-form");
+    },
+
+    loadProfilePhoto(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowedTypes.includes(file.type)) {
+        View.toast("Use uma foto em JPG, PNG ou WebP.");
+        event.target.value = "";
+        return;
+      }
+
+      const maxSize = 500 * 1024;
+      if (file.size > maxSize) {
+        View.toast("Use uma foto de ate 500 KB.");
+        event.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        const dataUrl = typeof reader.result === "string" ? reader.result : "";
+        $("#profile-photo-data").value = dataUrl;
+        View.renderProfilePhoto(dataUrl);
+      });
+      reader.addEventListener("error", () => {
+        View.toast("Nao foi possivel carregar a foto.");
+        event.target.value = "";
+      });
+      reader.readAsDataURL(file);
+    },
+
+    removeProfilePhoto() {
+      $("#profile-photo-data").value = "";
+      $("#profile-photo").value = "";
+      View.renderProfilePhoto("");
     },
 
     async saveProfile(event) {
@@ -1149,13 +1273,20 @@
         ...currentUser,
         name: $("#profile-name").value.trim(),
         email: currentUser.email || this.session?.user?.email || "",
-        role: currentUser.role
+        role: currentUser.role,
+        photoDataUrl: $("#profile-photo-data").value || ""
       };
 
       if (user.role === "aluno") {
         user.level = $("#profile-level").value;
         user.advisorId = $("#profile-advisor").value;
         user.researchProject = $("#profile-research-project").value.trim();
+        user.entryDate = $("#profile-entry-date").value;
+        user.qualificationDeadline = $("#profile-qualification-deadline").value;
+        user.advisorMeetingUrl = $("#profile-advisor-meeting-url").value.trim();
+        user.articleUrl = $("#profile-article-url").value.trim();
+        user.qualificationUrl = $("#profile-qualification-url").value.trim();
+        user.thesisUrl = $("#profile-thesis-url").value.trim();
         if (user.level === "graduacao") {
           user.course = $("#profile-course").value;
           user.program = $("#profile-program").value;
@@ -1174,6 +1305,12 @@
         delete user.advisorId;
         delete user.advisorName;
         delete user.researchProject;
+        delete user.entryDate;
+        delete user.qualificationDeadline;
+        delete user.advisorMeetingUrl;
+        delete user.articleUrl;
+        delete user.qualificationUrl;
+        delete user.thesisUrl;
       }
 
       const error = Domain.validateUser(state, user);
@@ -1192,6 +1329,12 @@
         metadata.advisorId = user.advisorId;
         metadata.advisorName = user.advisorName;
         metadata.researchProject = user.researchProject || "";
+        metadata.entryDate = user.entryDate || "";
+        metadata.qualificationDeadline = user.qualificationDeadline || "";
+        metadata.advisorMeetingUrl = user.advisorMeetingUrl || "";
+        metadata.articleUrl = user.articleUrl || "";
+        metadata.qualificationUrl = user.qualificationUrl || "";
+        metadata.thesisUrl = user.thesisUrl || "";
         if (user.level === "graduacao") {
           metadata.course = user.course;
           metadata.program = user.program;
@@ -1319,6 +1462,8 @@
       View.showView("users");
       $("#user-id").value = user.id;
       $("#user-name").value = user.name;
+      $("#user-email").value = user.email || "";
+      $("#user-password").value = "";
       $("#user-role").value = user.role;
       $("#student-level").value = user.level || "graduacao";
       $("#student-course").value = user.course || Config.courses[0];

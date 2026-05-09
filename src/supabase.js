@@ -144,6 +144,12 @@
         advisorId: role === "aluno" ? metadata.advisorId || "" : "",
         advisorName: role === "aluno" ? metadata.advisorName || "" : "",
         researchProject: role === "aluno" ? metadata.researchProject || "" : "",
+        entryDate: role === "aluno" ? metadata.entryDate || "" : "",
+        qualificationDeadline: role === "aluno" ? metadata.qualificationDeadline || "" : "",
+        advisorMeetingUrl: role === "aluno" ? metadata.advisorMeetingUrl || "" : "",
+        articleUrl: role === "aluno" ? metadata.articleUrl || "" : "",
+        qualificationUrl: role === "aluno" ? metadata.qualificationUrl || "" : "",
+        thesisUrl: role === "aluno" ? metadata.thesisUrl || "" : "",
         source: "auth"
       };
       const state = await this.loadState(emptyState());
@@ -151,6 +157,16 @@
       const index = users.findIndex((entry) => {
         return entry.authUserId === user.authUserId || entry.email === user.email || entry.id === user.id;
       });
+      const existingUser = index >= 0 ? users[index] : null;
+      user.photoDataUrl = metadata.photoDataUrl || existingUser?.photoDataUrl || "";
+      if (role === "aluno") {
+        user.entryDate = metadata.entryDate || existingUser?.entryDate || "";
+        user.qualificationDeadline = metadata.qualificationDeadline || existingUser?.qualificationDeadline || "";
+        user.advisorMeetingUrl = metadata.advisorMeetingUrl || existingUser?.advisorMeetingUrl || "";
+        user.articleUrl = metadata.articleUrl || existingUser?.articleUrl || "";
+        user.qualificationUrl = metadata.qualificationUrl || existingUser?.qualificationUrl || "";
+        user.thesisUrl = metadata.thesisUrl || existingUser?.thesisUrl || "";
+      }
       const nextUsers = [...users];
       if (index >= 0) nextUsers[index] = { ...nextUsers[index], ...user };
       else nextUsers.push(user);
