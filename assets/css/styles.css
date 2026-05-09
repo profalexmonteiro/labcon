@@ -1,18 +1,18 @@
 :root {
-  color-scheme: light;
-  --bg: #f4f6f2;
-  --surface: #ffffff;
-  --surface-muted: #eef2ea;
-  --ink: #202521;
-  --muted: #657064;
-  --line: #dbe1d6;
-  --primary: #226b57;
-  --primary-dark: #174b3e;
-  --accent: #b74f2a;
-  --accent-soft: #f3dfd2;
-  --yellow-soft: #f4e6b5;
-  --danger: #9b2d2d;
-  --shadow: 0 18px 48px rgba(32, 37, 33, 0.09);
+  color-scheme: dark;
+  --bg: #101311;
+  --surface: #181d1b;
+  --surface-muted: #222a26;
+  --ink: #edf4ef;
+  --muted: #a7b5ad;
+  --line: #314039;
+  --primary: #49b99c;
+  --primary-dark: #8fd8c2;
+  --accent: #ff9b72;
+  --accent-soft: #493027;
+  --yellow-soft: #403c22;
+  --danger: #ff7b7b;
+  --shadow: 0 20px 52px rgba(0, 0, 0, 0.42);
 }
 
 * {
@@ -113,9 +113,9 @@ select {
 }
 
 .auth-tab.active {
-  background: #fff;
+  background: var(--surface);
   color: var(--primary-dark);
-  box-shadow: 0 8px 20px rgba(32, 37, 33, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.26);
 }
 
 .auth-form {
@@ -154,8 +154,8 @@ select {
 }
 
 .sidebar {
-  background: #17211c;
-  color: #f8fbf6;
+  background: #0b0f0d;
+  color: var(--ink);
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -172,8 +172,8 @@ select {
   width: 44px;
   height: 44px;
   border-radius: 8px;
-  background: #d5e85d;
-  color: #17211c;
+  background: var(--primary);
+  color: #07100d;
   display: grid;
   place-items: center;
   font-weight: 800;
@@ -186,7 +186,7 @@ select {
 
 .brand small,
 .sidebar-footer {
-  color: #b9c5b6;
+  color: var(--muted);
 }
 
 .nav-list {
@@ -200,7 +200,7 @@ select {
 }
 
 .nav-group-title {
-  color: #b9c5b6;
+  color: var(--muted);
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -225,7 +225,7 @@ select {
 }
 
 .nav-child::before {
-  background: #56675d;
+  background: var(--line);
   content: "";
   height: 1px;
   left: -10px;
@@ -237,7 +237,7 @@ select {
 .nav-item {
   border: 0;
   border-radius: 8px;
-  color: #edf4eb;
+  color: var(--ink);
   background: transparent;
   padding: 12px 14px;
   text-align: left;
@@ -246,7 +246,7 @@ select {
 
 .nav-item:hover,
 .nav-item.active {
-  background: rgba(213, 232, 93, 0.14);
+  background: rgba(73, 185, 156, 0.18);
   color: #ffffff;
 }
 
@@ -262,7 +262,7 @@ select {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #d5e85d;
+  background: var(--primary);
 }
 
 .main {
@@ -366,7 +366,7 @@ select {
 .info-chip {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   padding: 12px;
 }
 
@@ -458,14 +458,14 @@ select {
   min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: #111714;
   color: var(--ink);
   padding: 9px 11px;
 }
 
 input:focus,
 select:focus {
-  outline: 3px solid rgba(34, 107, 87, 0.16);
+  outline: 3px solid rgba(73, 185, 156, 0.24);
   border-color: var(--primary);
 }
 
@@ -503,7 +503,7 @@ select:focus {
   height: 14px;
   border-radius: 4px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   display: inline-block;
 }
 
@@ -513,7 +513,7 @@ select:focus {
 }
 
 .legend-box.occupied {
-  border-color: #c58b79;
+  border-color: var(--accent);
   background: var(--accent-soft);
 }
 
@@ -522,7 +522,7 @@ select:focus {
   overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .reservation-matrix {
@@ -560,7 +560,7 @@ select:focus {
 }
 
 .reservation-matrix tbody th {
-  background: #fafbf7;
+  background: #151b18;
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
@@ -568,12 +568,12 @@ select:focus {
 }
 
 .reservation-matrix td {
-  background: #fff;
+  background: var(--surface);
   height: 44px;
 }
 
 .reservation-matrix td.selected {
-  background: rgba(34, 107, 87, 0.14);
+  background: rgba(73, 185, 156, 0.2);
 }
 
 .reservation-matrix td.occupied {
@@ -600,26 +600,26 @@ select:focus {
   height: 22px;
   border: 2px solid var(--line);
   border-radius: 6px;
-  background: #fff;
+  background: #101512;
   display: block;
 }
 
 .slot-check input:checked + span {
   border-color: var(--primary);
   background: var(--primary);
-  box-shadow: inset 0 0 0 4px #fff;
+  box-shadow: inset 0 0 0 4px #101512;
 }
 
 .slot-check input:disabled + span {
-  border-color: #c58b79;
-  background: repeating-linear-gradient(135deg, #f6d8cb, #f6d8cb 4px, #f0c5b4 4px, #f0c5b4 8px);
+  border-color: var(--accent);
+  background: repeating-linear-gradient(135deg, #493027, #493027 4px, #5a382d 4px, #5a382d 8px);
   cursor: not-allowed;
 }
 
 .selection-summary {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fafbf7;
+  background: var(--surface-muted);
   color: var(--muted);
   padding: 10px 12px;
   font-weight: 700;
@@ -638,7 +638,7 @@ select:focus {
   aspect-ratio: 1;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fafbf7;
+  background: var(--surface-muted);
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -675,7 +675,7 @@ select:focus {
 .list-row {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   padding: 13px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -725,14 +725,14 @@ select:focus {
 .reservation-user-group {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   padding: 14px;
 }
 
 .desk-lab-group {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   padding: 14px;
 }
 
@@ -795,7 +795,7 @@ select:focus {
 }
 
 .reservation-schedule-row {
-  background: #f8faf5;
+  background: var(--surface-muted);
   border-left: 4px solid var(--primary);
   border-radius: 8px;
   display: grid;
@@ -805,7 +805,7 @@ select:focus {
 }
 
 .desk-schedule-row {
-  background: #f8faf5;
+  background: var(--surface-muted);
   border-left: 4px solid var(--primary);
   border-radius: 8px;
   display: grid;
@@ -906,7 +906,7 @@ select:focus {
 .user-chip {
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
   padding: 7px 11px;
   color: var(--muted);
   font-weight: 700;
@@ -954,8 +954,8 @@ select:focus {
 }
 
 .status-chip.free {
-  background: #e8f3e6;
-  color: #275b35;
+  background: #17362c;
+  color: #8fd8c2;
 }
 
 .status-chip.busy {
@@ -965,14 +965,14 @@ select:focus {
 
 .reservation-pill {
   border-left: 4px solid var(--primary);
-  background: #f8faf5;
+  background: var(--surface-muted);
   border-radius: 8px;
   padding: 10px;
 }
 
 .desk-user-card {
   border-left: 4px solid var(--primary);
-  background: #f8faf5;
+  background: var(--surface-muted);
   border-radius: 8px;
   padding: 10px;
 }
@@ -1007,7 +1007,7 @@ select:focus {
   border-radius: 8px;
   padding: 18px;
   text-align: center;
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(73, 185, 156, 0.08);
 }
 
 .toast {
@@ -1018,8 +1018,8 @@ select:focus {
   max-width: 420px;
   padding: 13px 15px;
   border-radius: 8px;
-  background: #17211c;
-  color: #fff;
+  background: #0b0f0d;
+  color: var(--ink);
   box-shadow: var(--shadow);
   opacity: 0;
   transform: translateY(12px);
