@@ -18,10 +18,10 @@ function env_or_default($name, $default) {
 }
 
 // Configurações do banco de dados - ajuste conforme seu ambiente
-define('DB_HOST', env_or_default('LABCON_DB_HOST', 'banco.ufam.edu.br'));
-define('DB_NAME', env_or_default('LABCON_DB_NAME', 'dom_etss'));
-define('DB_USER', env_or_default('LABCON_DB_USER', 'dom_etss'));
-define('DB_PASS', env_or_default('LABCON_DB_PASS', 'uCfybBhG9WncDJdS'));
+define('DB_HOST', env_or_default('LABCON_DB_HOST', ''));
+define('DB_NAME', env_or_default('LABCON_DB_NAME', ''));
+define('DB_USER', env_or_default('LABCON_DB_USER', ''));
+define('DB_PASS', env_or_default('LABCON_DB_PASS', ''));
 define('DB_CHARSET', 'utf8mb4');
 define('DB_COLLATION', 'utf8mb4_unicode_ci');
 
