@@ -5,9 +5,15 @@ namespace App\Services;
 use App\Repositories\UserRepository;
 use InvalidArgumentException;
 
+/**
+ * Regras de negócio de usuários: validação de papel, campos opcionais do
+ * perfil acadêmico e da foto de perfil (armazenada como data URL).
+ */
 class UserService
 {
+    /** Tamanho máximo aceito para a data URL da foto de perfil (512 KB). */
     const MAX_PHOTO_BYTES  = 524288; // 512 KB
+    /** Prefixos de data URL aceitos como foto de perfil (restringe os formatos de imagem permitidos). */
     const ALLOWED_PHOTO_PREFIXES = [
         'data:image/jpeg;base64,',
         'data:image/png;base64,',
@@ -23,11 +29,23 @@ class UserService
         $this->users = $users !== null ? $users : new UserRepository();
     }
 
+    /** @return array Todos os usuários, no formato da API. */
     public function all()
     {
         return array_map('user_to_array', $this->users->all());
     }
 
+    /**
+     * Valida e persiste (insere ou atualiza) um usuário.
+     *
+     * A restrição de quem pode alterar o campo `role` (papel) é feita no
+     * Controller/chamador: aqui, se `role` não vier no payload, mantém-se
+     * o papel já existente do usuário; se vier, apenas valida que é um dos
+     * papéis conhecidos.
+     *
+     * @throws InvalidArgumentException Em campos obrigatórios ausentes,
+     *                                   papel inválido, ou foto de perfil inválida.
+     */
     public function save(array $item)
     {
         if (empty($item['id']) || empty($item['name'])) {
@@ -88,6 +106,7 @@ class UserService
         return user_to_array($this->users->save($fields));
     }
 
+    /** @throws InvalidArgumentException Quando o id não é informado. */
     public function delete($id)
     {
         if (!$id) {
@@ -97,6 +116,13 @@ class UserService
         $this->users->delete($id);
     }
 
+    /**
+     * Garante que a foto de perfil é uma data URL de um formato permitido
+     * e não excede o tamanho máximo, antes de ser persistida como
+     * MEDIUMTEXT no banco (ver includes/install.php).
+     *
+     * @throws InvalidArgumentException Em formato não permitido ou imagem grande demais.
+     */
     private function validatePhotoDataUrl($dataUrl)
     {
         $matched = false;

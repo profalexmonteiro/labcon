@@ -9,6 +9,10 @@ use App\Support\Response;
 use InvalidArgumentException;
 use RuntimeException;
 
+/**
+ * Endpoint `api/smtp.php`: leitura e gravação das configurações de SMTP,
+ * e envio de um e-mail de teste (`action=test`). Restrito a administradores.
+ */
 class SmtpSettingsController
 {
     /** @var SmtpSettingsService */

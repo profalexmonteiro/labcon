@@ -27,10 +27,10 @@ Sistema web para gerenciamento de laboratórios de pesquisa, mesas, reservas e u
 
 | Componente | Versão mínima |
 |---|---|
-| PHP | 8.1 |
-| MySQL / MariaDB | 8.0 / 10.6 |
+| PHP | **5.6.4** — a aplicação foi convertida para rodar em hospedagens com PHP legado. `includes/compat56.php` implementa polyfills (`random_bytes`, `random_int`, `str_contains`, `str_starts_with`, `str_ends_with`) para as versões nativas ausentes no PHP 5.6. Funciona sem alterações em PHP 7.x/8.x. |
+| MySQL / MariaDB | 5.6 / 10.1 (qualquer versão com suporte a `InnoDB` e `ON DUPLICATE KEY UPDATE`) |
 | Extensões PHP | `pdo_mysql`, `openssl`, `mbstring`, `json` |
-| Servidor web | Apache 2.4+ ou XAMPP 8.x |
+| Servidor web | Apache 2.4+ com `mod_rewrite` e `mod_headers` (ou XAMPP) |
 
 ---
 
@@ -46,9 +46,9 @@ Sistema web para gerenciamento de laboratórios de pesquisa, mesas, reservas e u
    git clone <url-do-repositorio> C:/xampp/htdocs/labcon2
    ```
 
-3. **Configure o banco de dados** editando `includes/config.php` (veja a seção [Banco de dados](#banco-de-dados)).
+3. **Configure o banco de dados** por variável de ambiente ou, em desenvolvimento, editando os fallbacks em `includes/config.php` (veja a seção [Banco de dados](#banco-de-dados)).
 
-4. **Configure a chave de aplicação** `APP_SECRET` (veja a seção [Chave de aplicação](#chave-de-aplicação-app_secret)).
+4. **Configure a chave de aplicação** `APP_SECRET` via variável de ambiente (veja a seção [Chave de aplicação](#chave-de-aplicação-app_secret)).
 
 5. **Acesse** `http://localhost/labcon2/` no navegador.  
    O sistema criará o banco de dados e as tabelas automaticamente na primeira requisição.
@@ -108,16 +108,27 @@ Sistema web para gerenciamento de laboratórios de pesquisa, mesas, reservas e u
 
 ### Banco de dados
 
-Edite o arquivo `includes/config.php` com as credenciais do seu ambiente:
+As credenciais de banco **não ficam mais fixas em texto puro no código-fonte** (isso seria exposição de segredo — qualquer pessoa com acesso ao repositório, incluindo o histórico do Git, teria a senha do banco). `includes/config.php` lê cada valor de uma variável de ambiente do servidor e só recorre a um valor padrão (fallback) quando a variável não está definida:
 
-```php
-define('DB_HOST', 'localhost');   // Host do MySQL
-define('DB_NAME', 'labcon');      // Nome do banco (será criado se não existir)
-define('DB_USER', 'root');        // Usuário MySQL
-define('DB_PASS', '');            // Senha MySQL
-define('DB_CHARSET',   'utf8mb4');
-define('DB_COLLATION', 'utf8mb4_unicode_ci');
+| Variável de ambiente | Constante PHP | Padrão (fallback) |
+|---|---|---|
+| `LABCON_DB_HOST` | `DB_HOST` | *(vazio)* |
+| `LABCON_DB_NAME` | `DB_NAME` | *(vazio)* |
+| `LABCON_DB_USER` | `DB_USER` | *(vazio)* |
+| `LABCON_DB_PASS` | `DB_PASS` | *(vazio)* |
+
+Configure essas variáveis no `VirtualHost` do Apache (`SetEnv`), no `.htaccess`, no pool do PHP-FPM ou no painel de hospedagem — conforme o que seu ambiente oferecer. Exemplo em um `VirtualHost`:
+
+```apache
+SetEnv LABCON_DB_HOST "localhost"
+SetEnv LABCON_DB_NAME "labcon"
+SetEnv LABCON_DB_USER "labcon_app"
+SetEnv LABCON_DB_PASS "senha-forte-aqui"
 ```
+
+Alternativamente, para desenvolvimento local, os fallbacks podem ser editados diretamente em `includes/config.php` — **desde que o arquivo não seja versionado com credenciais reais**.
+
+`DB_CHARSET` (`utf8mb4`) e `DB_COLLATION` (`utf8mb4_unicode_ci`) são fixos no código e normalmente não precisam ser alterados.
 
 O sistema executa a criação do banco e das tabelas automaticamente via `includes/install.php` na primeira requisição. Nenhum comando SQL manual é necessário.
 
@@ -131,12 +142,18 @@ mysql -u root -p < database/schema.sql
 
 ### Chave de aplicação (APP_SECRET)
 
-`APP_SECRET` é usada para cifrar a senha SMTP armazenada no banco de dados (AES-256-CBC).
+`APP_SECRET` é usada para derivar as chaves de cifragem e de autenticação (Encrypt-then-MAC, AES-256-CBC + HMAC-SHA256) da senha SMTP armazenada no banco de dados.
 
-**Antes de colocar o sistema em produção, substitua o valor padrão por uma string aleatória de pelo menos 32 caracteres:**
+Assim como as credenciais de banco, ela é lida da variável de ambiente `LABCON_APP_SECRET`, com um valor padrão inseguro (`labcon-change-this-secret-key`) como fallback apenas para não quebrar instalações que ainda não a configuraram:
 
 ```php
-define('APP_SECRET', 'SuaChaveSecretaAqui_MudeEsta_32chars+');
+define('APP_SECRET', env_or_default('LABCON_APP_SECRET', 'labcon-change-this-secret-key'));
+```
+
+**Antes de colocar o sistema em produção, defina `LABCON_APP_SECRET` com uma string aleatória de pelo menos 32 caracteres:**
+
+```apache
+SetEnv LABCON_APP_SECRET "cole-aqui-uma-chave-aleatoria-de-32-ou-mais-caracteres"
 ```
 
 Para gerar uma chave segura:
@@ -149,7 +166,7 @@ openssl rand -hex 32
 php -r "echo bin2hex(random_bytes(32));"
 ```
 
-> **Atenção:** Se a chave padrão não for alterada, o sistema registrará um aviso no PHP error log a cada requisição. Se a chave for alterada após a configuração SMTP ter sido salva, será necessário reconfigurar o SMTP na interface administrativa.
+> **Atenção:** Se a chave padrão não for alterada, o sistema registra um aviso no PHP error log (tag `[LabCon SECURITY]`) a cada requisição. Se a chave for alterada após a configuração SMTP ter sido salva, será necessário reconfigurar o SMTP na interface administrativa, pois a senha antiga não poderá mais ser decifrada.
 
 ---
 
@@ -169,6 +186,16 @@ Parâmetros disponíveis:
 | Nome remetente | Nome exibido ao destinatário |
 
 A senha SMTP é armazenada cifrada no banco de dados usando a `APP_SECRET` configurada acima.
+
+---
+
+### Modo debug (APP_DEBUG)
+
+Controlado pela variável de ambiente `LABCON_APP_DEBUG` (`1` para ativar). **Mantenha desligado em produção**: com o modo debug ativo, uma exceção não tratada exibe stack trace, caminhos do servidor e trechos de SQL diretamente na resposta HTTP para qualquer visitante. Erros são sempre registrados no PHP error log (`log_errors`), independentemente do modo debug.
+
+```apache
+SetEnv LABCON_APP_DEBUG "1"   # apenas em desenvolvimento
+```
 
 ---
 
@@ -228,7 +255,8 @@ labcon2/
 │   └── Support/          # Request, Response (utilitários HTTP)
 │
 ├── includes/
-│   ├── config.php        # Constantes de ambiente
+│   ├── config.php        # Constantes de ambiente (lidas de variáveis LABCON_*)
+│   ├── compat56.php      # Polyfills para PHP 5.6 (random_bytes, str_contains, etc.)
 │   ├── auth.php          # Sessão, CSRF, helpers de autorização
 │   ├── db.php            # Conexão PDO lazy
 │   ├── install.php       # Criação automática do schema
@@ -242,9 +270,11 @@ labcon2/
 │
 ├── assets/               # CSS e imagens
 ├── database/             # Schema SQL para instalação manual
+├── .htaccess             # Regras do Apache: bloqueio de diretórios internos/dotfiles, headers de segurança
 ├── admin.php             # Interface administrativa (requer autenticação)
 ├── index.php             # Painel público (sem autenticação)
 ├── login.php             # Tela de login e cadastro
+├── logout.php            # Encerra a sessão
 └── reset_password.php    # Redefinição de senha por token
 ```
 
@@ -280,6 +310,22 @@ api/reservations.php
 
 - Máximo de **10 tentativas de login** por IP + e-mail em uma janela de **5 minutos**.
 - Tentativas registradas na tabela `login_attempts` e limpas automaticamente.
+
+### Segredos e credencial padrão
+
+- Credenciais de banco e `APP_SECRET` são lidas de variáveis de ambiente (`LABCON_*`), não ficam fixas no código-fonte (ver [Configuração](#configuração)).
+- Se a conta de administrador padrão for detectada com um dos hashes de senha conhecidos de instalações antigas do projeto, o sistema **rotaciona automaticamente** essa senha para uma nova senha aleatória na próxima requisição (ver `includes/install.php::setup_default_admin()`), fechando a janela de uma credencial padrão previsível.
+- O arquivo `.labcon_setup`, gerado com a credencial do administrador, é bloqueado de acesso HTTP direto pelo `.htaccess` (regra de dotfiles) mesmo que não seja apagado manualmente — mas a boa prática continua sendo apagá-lo após o primeiro login.
+
+### Servidor web (.htaccess)
+
+O `.htaccess` na raiz do projeto aplica três camadas de proteção adicionais no nível do Apache:
+
+- **Bloqueio de diretórios internos:** `includes/`, `app/` e `database/` retornam 403 mesmo se acessados diretamente pela URL — apenas os arquivos da raiz e de `api/` são servidos.
+- **Bloqueio de dotfiles:** qualquer arquivo iniciado por `.` (`.htaccess`, `.labcon_setup`, `.git`, `.env` etc.) é negado, em qualquer diretório.
+- **Cabeçalhos de segurança padrão:** `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Content-Security-Policy` e `Strict-Transport-Security` (este último apenas sob HTTPS) são enviados como headers HTTP reais — necessário porque vários deles não têm efeito quando definidos via `<meta http-equiv>`.
+
+> Se a instalação não usar Apache (ex.: Nginx/PHP-FPM), replique essas regras na configuração do servidor equivalente.
 
 ### CSRF
 

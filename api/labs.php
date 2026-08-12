@@ -1,4 +1,5 @@
 <?php
+/** Dispatcher HTTP de /api/labs.php — ver comentário em api/auth.php. */
 
 require_once __DIR__ . '/../app/bootstrap.php';
 

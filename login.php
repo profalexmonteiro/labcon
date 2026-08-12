@@ -1,4 +1,9 @@
 <?php
+/**
+ * Tela de login/cadastro/recuperação de senha. A lógica de autenticação
+ * roda inteiramente no cliente (src/login.js) via chamadas a api/auth.php;
+ * este script só inicia a sessão e injeta o token CSRF no HTML.
+ */
 require_once __DIR__ . '/app/bootstrap.php';
 start_session();
 $_csrf = csrf_token();

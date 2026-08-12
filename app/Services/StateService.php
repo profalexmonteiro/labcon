@@ -7,6 +7,12 @@ use App\Repositories\LabRepository;
 use App\Repositories\ReservationRepository;
 use App\Repositories\UserRepository;
 
+/**
+ * Agrega o estado completo da aplicação (usuários, laboratórios, mesas e
+ * reservas) usado pelo painel administrativo, e oferece as operações
+ * administrativas de manutenção de dados: limpar tudo ou popular com
+ * dados de exemplo.
+ */
 class StateService
 {
     /** @var UserRepository */
@@ -30,6 +36,7 @@ class StateService
         $this->reservations = $reservations !== null ? $reservations : new ReservationRepository();
     }
 
+    /** @return array Snapshot completo do estado, no formato consumido pelo front-end. */
     public function all()
     {
         return [
@@ -40,6 +47,12 @@ class StateService
         ];
     }
 
+    /**
+     * Remove todos os dados de todas as entidades. A ordem (reservas →
+     * mesas → laboratórios → usuários) respeita as dependências de chave
+     * estrangeira do schema, evitando erros de FK mesmo que o banco não
+     * tenha `ON DELETE CASCADE` configurado para alguma delas.
+     */
     public function clear()
     {
         $this->reservations->deleteAll();
@@ -48,6 +61,11 @@ class StateService
         $this->users->deleteAll();
     }
 
+    /**
+     * Popula a base com um laboratório, dois professores e 16 mesas de
+     * exemplo — usado para demonstração/testes manuais, acionado pela
+     * interface administrativa (`action=seed`).
+     */
     public function seed()
     {
         $labId = 'lab-' . bin2hex(random_bytes(6));

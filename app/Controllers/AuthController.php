@@ -8,6 +8,12 @@ use App\Support\Response;
 use InvalidArgumentException;
 use RuntimeException;
 
+/**
+ * Endpoint `api/auth.php`: verificação de sessão (GET) e ações de
+ * autenticação — login, cadastro, logout e recuperação de senha (POST,
+ * despachadas pelo campo `action` do corpo). Não requer autenticação
+ * prévia, pois é justamente por aqui que ela é obtida.
+ */
 class AuthController
 {
     /** @var AuthService */

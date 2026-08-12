@@ -7,6 +7,14 @@ use App\Support\Request;
 use App\Support\Response;
 use InvalidArgumentException;
 
+/**
+ * Endpoint `api/users.php`: CRUD de usuários.
+ *
+ * Regras de autorização aplicadas aqui (antes de delegar a UserService):
+ * qualquer usuário autenticado pode listar; editar exige ser o próprio
+ * usuário ou um administrador (e só administrador pode alterar `role`);
+ * excluir é restrito a administradores.
+ */
 class UserController
 {
     /** @var UserService */

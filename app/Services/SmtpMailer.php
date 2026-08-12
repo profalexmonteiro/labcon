@@ -4,6 +4,14 @@ namespace App\Services;
 
 use RuntimeException;
 
+/**
+ * Cliente SMTP mínimo implementado sobre sockets brutos (sem biblioteca
+ * externa), usado para o e-mail de recuperação de senha. Fala diretamente
+ * o protocolo SMTP (EHLO/STARTTLS/AUTH LOGIN/MAIL FROM/RCPT TO/DATA) e
+ * inclui mitigações específicas contra SSRF (validação de IP do host,
+ * ver validateSmtpHost()) e injeção de cabeçalho/comando SMTP (ver
+ * sanitizeSmtpAddress() e dotEscape()).
+ */
 class SmtpMailer
 {
     /** @var array */
@@ -11,11 +19,19 @@ class SmtpMailer
     /** @var resource|null */
     private $socket = null;
 
+    /** @param array $settings Configuração SMTP (host, port, encryption, username, password, fromEmail, fromName). */
     public function __construct(array $settings)
     {
         $this->settings = $settings;
     }
 
+    /**
+     * Envia um e-mail HTML+texto via SMTP, seguindo o handshake completo
+     * do protocolo (conexão, EHLO, STARTTLS opcional, autenticação e envio
+     * da mensagem em multipart/alternative).
+     *
+     * @throws RuntimeException Em qualquer falha de configuração, conexão ou resposta SMTP inesperada.
+     */
     public function send($toEmail, $toName, $subject, $htmlBody, $textBody)
     {
         if (empty($this->settings['enabled'])) {
@@ -110,6 +126,12 @@ class SmtpMailer
         return $ips[0];
     }
 
+    /**
+     * Resolve um hostname para seus endereços IPv4 (A) e IPv6 (AAAA).
+     * Se `$host` já for um IP literal, retorna-o diretamente sem consulta DNS.
+     *
+     * @return string[] Lista de IPs encontrados (pode ser vazia).
+     */
     private function resolveHostIps($host)
     {
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
@@ -142,6 +164,7 @@ class SmtpMailer
         return $sanitized !== null ? $sanitized : '';
     }
 
+    /** Monta a mensagem MIME multipart/alternative (texto simples + HTML) com os headers do e-mail. */
     private function buildMessage($toEmail, $toName, $subject, $htmlBody, $textBody)
     {
         $boundary = 'b_' . bin2hex(random_bytes(12));
@@ -162,12 +185,20 @@ class SmtpMailer
             . '--' . $boundary . '--';
     }
 
+    /** Envia um comando SMTP e valida o código de resposta contra `$expected`. */
     private function command($command, array $expected)
     {
         fwrite($this->socket, $command . "\r\n");
         return $this->expect($expected);
     }
 
+    /**
+     * Lê a resposta do servidor SMTP linha a linha até encontrar a linha
+     * final (código seguido de espaço, não de hífen — fim de resposta
+     * multi-linha) e valida o código contra os aceitos em `$expected`.
+     *
+     * @throws RuntimeException Quando o código retornado não está em `$expected`.
+     */
     private function expect(array $expected)
     {
         $response = '';
@@ -184,17 +215,26 @@ class SmtpMailer
         return $response;
     }
 
+    /** Monta o header `Nome &lt;email&gt;` para os campos From/To. */
     private function address($email, $name)
     {
         $name = trim($name);
         return ($name ? $this->encodeHeader($name) . ' ' : '') . '<' . $this->sanitizeSmtpAddress($email) . '>';
     }
 
+    /** Codifica um valor de header em UTF-8 Base64 (RFC 2047), necessário para acentuação no Subject/From. */
     private function encodeHeader($value)
     {
         return '=?UTF-8?B?' . base64_encode($value) . '?=';
     }
 
+    /**
+     * Aplica "dot-stuffing": duplica qualquer linha do corpo que comece com
+     * um ponto (`.` → `..`). É a técnica padrão do protocolo SMTP (RFC 5321)
+     * para impedir que uma linha `.` isolada no corpo do e-mail seja
+     * interpretada como o terminador da sequência DATA, o que encerraria a
+     * mensagem prematuramente ou permitiria injetar comandos SMTP adicionais.
+     */
     private function dotEscape($body)
     {
         $body = str_replace(["\r\n", "\r"], "\n", $body);

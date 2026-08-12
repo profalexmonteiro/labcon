@@ -1,19 +1,42 @@
 <?php
+/**
+ * Instalador automático do banco de dados.
+ *
+ * Cria o banco (se não existir), todas as tabelas do schema, os índices
+ * necessários e a conta de administrador padrão — tudo na primeira
+ * requisição feita à aplicação, sem exigir passos manuais de instalação.
+ * Isso é redundante de propósito com `database/schema.sql`, que existe
+ * apenas como referência/alternativa para instalação manual via linha
+ * de comando.
+ */
 
 require_once __DIR__ . '/config.php';
 
+/**
+ * Escapa um identificador (nome de tabela/coluna/índice) com backticks,
+ * duplicando backticks internos. Usado sempre que um nome dinâmico
+ * precisa ser interpolado em SQL (identificadores não podem ser
+ * parametrizados via prepared statement).
+ */
 function db_identifier($name) {
     return '`' . str_replace('`', '``', $name) . '`';
 }
 
+/** DSN de conexão ao servidor MySQL sem banco selecionado (usado para criar o banco). */
 function get_server_dsn() {
     return 'mysql:host=' . DB_HOST . ';charset=' . DB_CHARSET;
 }
 
+/** DSN de conexão já apontando para o banco de dados da aplicação. */
 function get_database_dsn() {
     return 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
 }
 
+/**
+ * Opções padrão do PDO usadas em todas as conexões da aplicação:
+ * exceções em erro de SQL, fetch associativo por padrão e prepares
+ * reais (não emulados) no driver do MySQL.
+ */
 function get_pdo_options() {
     return [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -22,6 +45,14 @@ function get_pdo_options() {
     ];
 }
 
+/**
+ * Garante que o banco de dados e o schema existem antes do primeiro uso.
+ *
+ * Idempotente por requisição (flag `static $ready`) e por ambiente
+ * (usa `CREATE DATABASE IF NOT EXISTS` / `CREATE TABLE IF NOT EXISTS`),
+ * portanto é seguro chamá-la a cada requisição sem custo de recriar nada
+ * já existente.
+ */
 function ensure_database_ready() {
     static $ready = false;
     if ($ready) {
@@ -41,6 +72,11 @@ function ensure_database_ready() {
     $ready = true;
 }
 
+/**
+ * Cria (se ainda não existirem) todas as tabelas da aplicação, na ordem
+ * que respeita as dependências de chave estrangeira, além dos índices
+ * auxiliares e da conta de administrador padrão.
+ */
 function create_schema(PDO $db) {
     $tableOptions = ' ENGINE=InnoDB DEFAULT CHARSET=' . DB_CHARSET . ' COLLATE=' . DB_COLLATION;
 
@@ -143,6 +179,17 @@ function create_schema(PDO $db) {
     create_index_if_missing($db, 'login_attempts', 'idx_login_attempts_attempted_at', 'attempted_at');
 }
 
+/**
+ * Garante a existência de uma conta de administrador com credencial segura.
+ *
+ * - Se a conta padrão (`admin-0000000000000000`) ainda não existe, cria-a
+ *   com uma senha aleatória de 16 caracteres hex e grava a credencial via
+ *   `write_setup_credentials()`.
+ * - Se a conta já existe mas seu hash de senha é um dos hashes "conhecidos"
+ *   de instalações antigas ($knownDefaultHashes — senhas padrão publicadas
+ *   em versões anteriores do projeto), a senha é rotacionada automaticamente
+ *   para uma nova senha aleatória, fechando uma janela de credencial previsível.
+ */
 function setup_default_admin(PDO $db) {
     $knownDefaultHashes = [
         '$2y$12$BLAMWlJ.gm0ms0aUp.JwuOyXkw1nOGvxPY9.QD0.BdbLAPmsVYLzq',
@@ -174,6 +221,13 @@ function setup_default_admin(PDO $db) {
     }
 }
 
+/**
+ * Registra a credencial recém-gerada do administrador em dois lugares:
+ * o PHP error log (tag `[LabCon]`) e o arquivo `.labcon_setup` na raiz do
+ * projeto — para que a pessoa que instalou o sistema consiga recuperá-la
+ * sem acesso direto ao banco de dados. O arquivo deve ser apagado pelo
+ * administrador após o primeiro login.
+ */
 function write_setup_credentials($password) {
     $msg = "[LabCon] Credencial do administrador — e-mail: admin@labcon.local | senha: $password — Altere após o primeiro acesso.";
     error_log($msg);
@@ -186,6 +240,11 @@ function write_setup_credentials($password) {
     @file_put_contents($setupFile, $content);
 }
 
+/**
+ * Cria um índice em `$table.$column` apenas se ele ainda não existir,
+ * consultando `information_schema.statistics`. Necessário porque o MySQL
+ * não possui uma cláusula `CREATE INDEX IF NOT EXISTS`.
+ */
 function create_index_if_missing(PDO $db, $table, $index, $column) {
     $stmt = $db->prepare(
         'SELECT COUNT(*) FROM information_schema.statistics

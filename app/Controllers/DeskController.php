@@ -7,6 +7,11 @@ use App\Support\Request;
 use App\Support\Response;
 use InvalidArgumentException;
 
+/**
+ * Endpoint `api/desks.php`: CRUD de mesas.
+ * Leitura exige apenas sessão ativa; criar/editar/excluir exige papel
+ * professor, técnico ou administrador.
+ */
 class DeskController
 {
     /** @var DeskService */

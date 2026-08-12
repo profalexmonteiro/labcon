@@ -9,6 +9,14 @@ use Exception;
 use InvalidArgumentException;
 use RuntimeException;
 
+/**
+ * Endpoint `api/reservations.php`: CRUD de reservas de mesa.
+ *
+ * Alunos só podem criar/editar/excluir as próprias reservas; professores,
+ * técnicos e administradores (`$canManageOthers`) podem gerenciar reservas
+ * de qualquer usuário. POST aceita tanto um único item quanto `{items: [...]}`
+ * para salvar em lote (ver ReservationService::saveMany()).
+ */
 class ReservationController
 {
     /** @var ReservationService */
@@ -33,6 +41,7 @@ class ReservationController
 
             if ($request->method() === 'POST') {
                 $body  = $request->body();
+                // Aceita um objeto único ou {items: [...]} para permitir salvar em lote
                 $items = isset($body['items']) ? $body['items'] : [$body];
 
                 if (!$canManageOthers) {

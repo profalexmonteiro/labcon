@@ -1,4 +1,13 @@
 <?php
+/**
+ * Interface administrativa (SPA): shell HTML com a navegação e todas as
+ * views (dashboard, reservas, cadastro, SMTP). Exige sessão ativa
+ * (require_auth() abaixo); a autorização fina por papel de usuário é
+ * feita no servidor a cada chamada de API — o JavaScript de permissões
+ * em src/config.js é só para ocultar/exibir elementos na UI (UX), nunca
+ * a fonte de verdade de segurança (ver README, seção "Autorização").
+ * Toda a interatividade roda em src/app.js, consumindo as APIs em api/*.php.
+ */
 require_once __DIR__ . '/app/bootstrap.php';
 require_auth();
 $_csrf = csrf_token();

@@ -7,6 +7,12 @@ use App\Repositories\UserRepository;
 use InvalidArgumentException;
 use RuntimeException;
 
+/**
+ * Regras de negócio de autenticação: login, cadastro público, logout e
+ * recuperação de senha. Toda validação de credencial e proteção contra
+ * força bruta vive aqui — AuthController apenas traduz HTTP <-> chamadas
+ * a este serviço.
+ */
 class AuthService
 {
     /** @var UserRepository */
@@ -16,7 +22,9 @@ class AuthService
     /** @var SmtpSettingsService */
     private $smtpSettings;
 
+    /** Máximo de tentativas de login permitidas dentro da janela abaixo. */
     const MAX_ATTEMPTS   = 10;
+    /** Duração da janela de rate limit de login, em segundos (5 minutos). */
     const WINDOW_SECONDS = 300;
 
     public function __construct(
@@ -30,6 +38,20 @@ class AuthService
         $this->smtpSettings = $smtpSettings !== null ? $smtpSettings : new SmtpSettingsService();
     }
 
+    /**
+     * Autentica um usuário por e-mail e senha e inicia a sessão.
+     *
+     * O identificador de rate limit combina IP + e-mail (em hash SHA-256)
+     * para limitar tentativas por combinação, sem expor o e-mail em texto
+     * puro na tabela `login_attempts`. A mensagem de erro é deliberadamente
+     * genérica ("e-mail ou senha incorretos") para não revelar se o e-mail
+     * existe na base (evita enumeração de contas).
+     *
+     * @throws InvalidArgumentException Quando e-mail/senha não são informados.
+     * @throws RuntimeException Quando as credenciais são inválidas ou o
+     *                          limite de tentativas foi excedido.
+     * @return array Usuário autenticado, no formato da API.
+     */
     public function login($email, $password)
     {
         $email = trim($email);
@@ -56,6 +78,12 @@ class AuthService
         return $user;
     }
 
+    /**
+     * Bloqueia o login quando o identificador já atingiu MAX_ATTEMPTS
+     * tentativas dentro da janela WINDOW_SECONDS.
+     *
+     * @throws RuntimeException Quando o limite foi atingido.
+     */
     private function enforceRateLimit($identifier)
     {
         $db   = get_db();
@@ -71,6 +99,12 @@ class AuthService
         }
     }
 
+    /**
+     * Registra uma tentativa de login falha e aproveita a chamada para
+     * varrer (e remover) registros antigos de `login_attempts` — uma
+     * limpeza incremental que evita a necessidade de um job/cron dedicado
+     * só para essa tabela.
+     */
     private function recordFailedAttempt($identifier)
     {
         $db   = get_db();
@@ -83,6 +117,7 @@ class AuthService
         $stmt->execute([self::WINDOW_SECONDS * 2]);
     }
 
+    /** Limpa o histórico de tentativas do identificador após um login bem-sucedido. */
     private function clearAttempts($identifier)
     {
         $db   = get_db();
@@ -90,6 +125,12 @@ class AuthService
         $stmt->execute([$identifier]);
     }
 
+    /**
+     * Realiza o auto-cadastro público de um novo usuário.
+     *
+     * @throws InvalidArgumentException Em dados inválidos ou e-mail duplicado.
+     * @return array Usuário criado (já autenticado/logado), no formato da API.
+     */
     public function register(array $body)
     {
         $name = trim(isset($body['name']) ? $body['name'] : '');
@@ -146,11 +187,24 @@ class AuthService
         return $user;
     }
 
+    /** Encerra a sessão do usuário atual. */
     public function logout()
     {
         clear_session();
     }
 
+    /**
+     * Inicia o fluxo de recuperação de senha: gera um token de uso único,
+     * grava seu hash no banco e envia por e-mail um link contendo o token
+     * em texto puro (que só existe fora do banco — ver resetPassword()).
+     *
+     * Retorna silenciosamente (sem lançar erro) quando o e-mail não existe
+     * na base, para não revelar a um atacante quais e-mails estão
+     * cadastrados (mitigação de enumeração de contas).
+     *
+     * @throws InvalidArgumentException Se o e-mail informado for inválido.
+     * @throws RuntimeException Se o SMTP não estiver configurado.
+     */
     public function requestPasswordReset($email)
     {
         $email = trim($email);
@@ -168,6 +222,9 @@ class AuthService
             throw new RuntimeException('SMTP nao configurado. Solicite ao administrador a configuracao do envio de e-mails.');
         }
 
+        // Apenas o hash SHA-256 do token é persistido (mesma lógica de senha
+        // hasheada): mesmo em caso de leitura indevida do banco, o token em
+        // texto puro enviado por e-mail não pode ser reconstruído a partir do hash.
         $token = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $token);
         $expiresAt = date('Y-m-d H:i:s', time() + 60 * 60);
@@ -185,6 +242,13 @@ class AuthService
         (new SmtpMailer($settings))->send($email, $name, $subject, $html, $text);
     }
 
+    /**
+     * Conclui o fluxo de recuperação de senha: valida o token recebido por
+     * e-mail, define a nova senha e marca o token como usado (uso único).
+     *
+     * @throws InvalidArgumentException Em token/senha com formato inválido.
+     * @throws RuntimeException Se o token for inválido, expirado ou já usado.
+     */
     public function resetPassword($token, $password)
     {
         $token = trim($token);
@@ -205,6 +269,8 @@ class AuthService
             throw new RuntimeException('Usuario nao encontrado.');
         }
 
+        // Reenvia todos os campos existentes do usuário porque save() faz um
+        // upsert completo da linha — omitir um campo aqui o reverteria para NULL.
         $this->users->save([
             'id' => $user['id'],
             'name' => $user['name'],
@@ -230,6 +296,13 @@ class AuthService
         $this->resets->markUsed($reset['id']);
     }
 
+    /**
+     * Monta a URL base da aplicação (schema + host + subdiretório) a partir
+     * das variáveis da requisição atual, para compor o link de redefinição
+     * de senha enviado por e-mail. Normaliza o caso em que a requisição
+     * partiu de dentro de `/api` (ex.: SCRIPT_NAME terminando em `/api/auth.php`)
+     * removendo esse segmento, já que `reset_password.php` fica na raiz do projeto.
+     */
     private function baseUrl()
     {
         $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ((isset($_SERVER['SERVER_PORT']) ? $_SERVER['SERVER_PORT'] : '') === '443');

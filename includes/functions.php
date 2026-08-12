@@ -1,5 +1,16 @@
 <?php
+/**
+ * Funções utilitárias de baixo nível: resposta HTTP em JSON, leitura do
+ * corpo da requisição e mapeamento de linhas do banco (snake_case) para
+ * arrays no formato usado pelo front-end (camelCase).
+ */
 
+/**
+ * Envia uma resposta JSON e finaliza a execução do script.
+ *
+ * @param array $data   Corpo da resposta, serializado com json_encode().
+ * @param int   $status Código de status HTTP (padrão 200).
+ */
 function json_response(array $data, $status = 200) {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
@@ -7,10 +18,21 @@ function json_response(array $data, $status = 200) {
     exit;
 }
 
+/**
+ * Atalho para responder um erro padronizado `{success:false, error:...}`.
+ *
+ * @param string $message Mensagem de erro amigável, em português.
+ * @param int    $status  Código de status HTTP (padrão 400).
+ */
 function json_error($message, $status = 400) {
     json_response(['success' => false, 'error' => $message], $status);
 }
 
+/**
+ * Lê e decodifica o corpo JSON da requisição atual (php://input).
+ *
+ * @return array Corpo decodificado, ou array vazio se ausente/inválido.
+ */
 function get_json_body() {
     $raw = file_get_contents('php://input');
     if (!$raw) return [];
@@ -18,6 +40,14 @@ function get_json_body() {
     return is_array($data) ? $data : [];
 }
 
+/**
+ * Converte uma linha da tabela `users` (colunas snake_case) para o formato
+ * de array camelCase consumido pelo front-end. Campos opcionais só são
+ * incluídos quando possuem valor (evita poluir o payload com `null`/vazios).
+ *
+ * @param array $row Linha retornada pelo PDO (FETCH_ASSOC).
+ * @return array Usuário no formato da API.
+ */
 function user_to_array(array $row) {
     $user = [
         'id'     => $row['id'],
@@ -43,6 +73,7 @@ function user_to_array(array $row) {
     return $user;
 }
 
+/** Converte uma linha da tabela `labs` para o formato de array da API. */
 function lab_to_array(array $row) {
     return [
         'id'       => $row['id'],
@@ -51,6 +82,7 @@ function lab_to_array(array $row) {
     ];
 }
 
+/** Converte uma linha da tabela `desks` para o formato de array da API. */
 function desk_to_array(array $row) {
     return [
         'id'    => $row['id'],
@@ -59,6 +91,7 @@ function desk_to_array(array $row) {
     ];
 }
 
+/** Converte uma linha da tabela `reservations` para o formato de array da API. */
 function reservation_to_array(array $row) {
     return [
         'id'     => $row['id'],
@@ -71,6 +104,20 @@ function reservation_to_array(array $row) {
     ];
 }
 
+/**
+ * Insere ou atualiza um registro de usuário em uma única instrução SQL
+ * (`INSERT ... ON DUPLICATE KEY UPDATE`), útil para operações de upsert
+ * (ex.: sincronização de usuários por `id` já conhecido).
+ *
+ * Os nomes de coluna vêm de `array_keys($fields)` e são escapados com
+ * backticks para permitir identificadores dinâmicos com segurança; os
+ * valores são sempre passados via placeholders (`?`) e nunca concatenados
+ * na string SQL, prevenindo SQL injection.
+ *
+ * @param PDO   $db     Conexão ativa.
+ * @param array $fields Colunas => valores a inserir/atualizar (deve conter 'id').
+ * @return array|false Linha resultante após o upsert, ou false se não encontrada.
+ */
 function upsert_user_record(PDO $db, array $fields) {
     $cols       = array_keys($fields);
     $quotedCols = array_map(function ($c) {

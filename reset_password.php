@@ -1,4 +1,10 @@
 <?php
+/**
+ * Tela de redefinição de senha. O token vem por query string (link
+ * enviado por e-mail em AuthService::requestPasswordReset()) e é apenas
+ * embutido no formulário — a validação de fato ocorre no servidor via
+ * POST para api/auth.php (action=resetPassword), nunca aqui.
+ */
 require_once __DIR__ . '/app/bootstrap.php';
 start_session();
 $_csrf = csrf_token();

@@ -1,4 +1,13 @@
 <?php
+/**
+ * Bootstrap da aplicação: carrega os includes de base (compatibilidade,
+ * configuração, banco, sessão/CSRF, utilitários), registra o tratamento
+ * global de erros/exceções não capturados e o autoloader PSR-4-like do
+ * namespace `App\`.
+ *
+ * Todo endpoint em api/*.php e toda página que usa Controllers/Services
+ * deve dar `require_once` neste arquivo como primeira linha.
+ */
 
 require_once __DIR__ . '/../includes/compat56.php';
 require_once __DIR__ . '/../includes/config.php';
@@ -26,6 +35,13 @@ set_exception_handler(function ($e) {
     exit;
 });
 
+/**
+ * Erros fatais (ex.: exaustão de memória, erro de parse em um require
+ * dinâmico) não passam pelo exception handler acima — o PHP simplesmente
+ * interrompe a execução. Este shutdown function captura esse caso via
+ * `error_get_last()` e garante a mesma resposta JSON genérica em vez de
+ * uma página de erro do PHP (ou uma resposta vazia) chegando ao cliente.
+ */
 register_shutdown_function(function () {
     $error = error_get_last();
     if (!$error || !in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
@@ -41,6 +57,11 @@ register_shutdown_function(function () {
     }
 });
 
+/**
+ * Autoloader para o namespace `App\`: mapeia `App\Controllers\FooController`
+ * para `app/Controllers/FooController.php`, relativo a este diretório
+ * (convenção PSR-4 simplificada, sem depender do Composer).
+ */
 spl_autoload_register(function ($class) {
     $prefix = 'App\\';
     if (strncmp($class, $prefix, strlen($prefix)) !== 0) {

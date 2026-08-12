@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Repositories\DeskRepository;
 use InvalidArgumentException;
 
+/** Regras de negócio de mesas: validação de campos e delegação ao repositório. */
 class DeskService
 {
     /** @var DeskRepository */
@@ -15,11 +16,17 @@ class DeskService
         $this->desks = $desks !== null ? $desks : new DeskRepository();
     }
 
+    /** @return array Todas as mesas, no formato da API. */
     public function all()
     {
         return array_map('desk_to_array', $this->desks->all());
     }
 
+    /**
+     * Valida e persiste (insere ou atualiza) uma mesa.
+     *
+     * @throws InvalidArgumentException Quando id, labId ou name estão ausentes.
+     */
     public function save(array $item)
     {
         if (empty($item['id']) || empty($item['labId']) || empty($item['name'])) {
@@ -33,6 +40,7 @@ class DeskService
         ]));
     }
 
+    /** @throws InvalidArgumentException Quando o id não é informado. */
     public function delete($id)
     {
         if (!$id) {

@@ -5,6 +5,14 @@ namespace App\Services;
 use App\Repositories\SettingsRepository;
 use InvalidArgumentException;
 
+/**
+ * Persistência e cifragem das configurações de envio de e-mail (SMTP).
+ *
+ * As configurações são guardadas como um único JSON na tabela
+ * `app_settings` (chave `smtp`), com a senha SMTP cifrada em
+ * Encrypt-then-MAC (AES-256-CBC + HMAC-SHA256) usando chaves derivadas de
+ * APP_SECRET — nunca em texto puro no banco.
+ */
 class SmtpSettingsService
 {
     const KEY = 'smtp';
@@ -17,6 +25,15 @@ class SmtpSettingsService
         $this->settings = $settings !== null ? $settings : new SettingsRepository();
     }
 
+    /**
+     * Retorna as configurações SMTP com os valores padrão aplicados.
+     *
+     * @param bool $includeSecret Quando false (padrão, usado pela tela de
+     *                            administração), a senha é omitida do
+     *                            retorno — apenas a flag `passwordSet`
+     *                            indica se uma senha já foi configurada.
+     *                            Passar true apenas em uso interno (ex.: SmtpMailer).
+     */
     public function get($includeSecret = false)
     {
         $stored = $this->decode($this->settings->get(self::KEY));
@@ -41,6 +58,18 @@ class SmtpSettingsService
         return $smtp;
     }
 
+    /**
+     * Valida e persiste as configurações SMTP enviadas pela tela de
+     * administração.
+     *
+     * O campo `keepPassword` permite ao front-end salvar as demais
+     * configurações sem reenviar a senha em texto puro a cada edição:
+     * quando marcado e nenhuma nova senha é informada, a senha atual
+     * (já decifrada internamente via `get(true)`) é reaproveitada.
+     *
+     * @throws InvalidArgumentException Em porta/criptografia inválida, ou
+     *                                   campos obrigatórios ausentes quando `enabled=true`.
+     */
     public function save(array $body)
     {
         $current = $this->get(true);
@@ -81,6 +110,7 @@ class SmtpSettingsService
         return $this->get();
     }
 
+    /** Decodifica o JSON armazenado e decifra a senha, se presente. */
     private function decode($value)
     {
         if (!$value) {
@@ -96,6 +126,7 @@ class SmtpSettingsService
         return $data;
     }
 
+    /** Cifra a senha (se presente) e serializa as configurações para JSON. */
     private function encode(array $smtp)
     {
         if (!empty($smtp['password'])) {
@@ -135,6 +166,7 @@ class SmtpSettingsService
         return base64_encode(self::CIPHER_VERSION . $iv . $mac . $cipher);
     }
 
+    /** Decodifica de base64 e despacha para o decifrador do formato (v2 autenticado, ou legado v1). */
     private function decrypt($encoded)
     {
         $raw = base64_decode($encoded, true);
@@ -151,6 +183,12 @@ class SmtpSettingsService
         return $this->decryptLegacyUnauthenticated($raw);
     }
 
+    /**
+     * Decifra o formato atual (v2): valida o HMAC antes de decifrar
+     * (Encrypt-then-MAC) e retorna string vazia — em vez de lançar erro —
+     * caso a integridade falhe, para não interromper a leitura das demais
+     * configurações SMTP por um segredo corrompido/adulterado.
+     */
     private function decryptAuthenticated($raw)
     {
         if (strlen($raw) <= 16 + 32) {
@@ -171,6 +209,10 @@ class SmtpSettingsService
         return $plain === false ? '' : $plain;
     }
 
+    /**
+     * Decifra o formato legado (v1, sem MAC), usado apenas para segredos
+     * gravados antes da introdução da autenticação Encrypt-then-MAC.
+     */
     private function decryptLegacyUnauthenticated($raw)
     {
         if (strlen($raw) <= 16) {
