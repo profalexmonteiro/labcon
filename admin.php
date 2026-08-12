@@ -1,22 +1,26 @@
+<?php
+require_once __DIR__ . '/app/bootstrap.php';
+require_auth();
+$_csrf = csrf_token();
+?>
 <!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://awoyslrpmbygibyvjnpb.supabase.co; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
     <meta name="referrer" content="no-referrer">
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
+    <meta name="csrf-token" content="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
     <title>LabCon | Controle de Laboratórios</title>
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
     <link rel="stylesheet" href="assets/css/styles.css">
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar" aria-label="Navegação principal">
         <div class="brand">
-          <span class="brand-mark">LC</span>
+          <img class="brand-logo" src="assets/img/labcontrol-logo.png" alt="LabControl">
           <div>
-            <strong>LabCon</strong>
             <small>Pesquisa e reservas</small>
           </div>
         </div>
@@ -35,11 +39,17 @@
               </div>
             </div>
           </div>
+          <div class="nav-group">
+            <div class="nav-group-title">Configuracao</div>
+            <div class="nav-sublist">
+              <button class="nav-item" type="button" data-view="smtp">SMTP</button>
+            </div>
+          </div>
         </nav>
 
         <div class="sidebar-footer">
           <span class="status-dot"></span>
-          Dados sincronizados no Supabase
+          Dados sincronizados com MySQL
         </div>
       </aside>
 
@@ -51,8 +61,8 @@
           </div>
           <div class="topbar-actions">
             <select id="public-lab-filter" aria-label="Filtrar laboratório do painel"></select>
-            <a class="button ghost" href="index.html">Painel público</a>
-            <a class="button ghost" href="login.html" id="logout-link">Sair</a>
+            <a class="button ghost" href="index.php">Painel público</a>
+            <a class="button ghost" href="logout.php" id="logout-link">Sair</a>
             <button class="button ghost" type="button" id="seed-data">Popular exemplo</button>
             <button class="button danger" type="button" id="clear-data">Limpar dados</button>
           </div>
@@ -374,13 +384,79 @@
             </div>
           </div>
         </section>
+
+        <section class="view" id="smtp-view" aria-labelledby="view-title">
+          <div class="work-layout">
+            <form class="panel form-panel" id="smtp-form">
+              <h2>Configuracao SMTP</h2>
+              <div class="field inline-check">
+                <label>
+                  <input id="smtp-enabled" type="checkbox">
+                  Ativar envio de e-mails
+                </label>
+              </div>
+              <div class="split-fields two">
+                <div class="field">
+                  <label for="smtp-host">Servidor SMTP</label>
+                  <input id="smtp-host" type="text" maxlength="160" placeholder="smtp.exemplo.com">
+                </div>
+                <div class="field">
+                  <label for="smtp-port">Porta</label>
+                  <input id="smtp-port" type="number" min="1" max="65535" value="587">
+                </div>
+              </div>
+              <div class="split-fields two">
+                <div class="field">
+                  <label for="smtp-encryption">Criptografia</label>
+                  <select id="smtp-encryption">
+                    <option value="tls">STARTTLS</option>
+                    <option value="ssl">SSL</option>
+                    <option value="none">Nenhuma</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="smtp-username">Usuario SMTP</label>
+                  <input id="smtp-username" type="text" autocomplete="off" maxlength="160">
+                </div>
+              </div>
+              <div class="field">
+                <label for="smtp-password">Senha SMTP</label>
+                <input id="smtp-password" type="password" autocomplete="new-password" maxlength="240" placeholder="Preencha para alterar">
+              </div>
+              <div class="split-fields two">
+                <div class="field">
+                  <label for="smtp-from-email">E-mail remetente</label>
+                  <input id="smtp-from-email" type="email" maxlength="254">
+                </div>
+                <div class="field">
+                  <label for="smtp-from-name">Nome remetente</label>
+                  <input id="smtp-from-name" type="text" maxlength="120" value="LabCon">
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="button primary" type="submit">Salvar SMTP</button>
+              </div>
+            </form>
+            <div class="panel">
+              <h2>Teste de envio</h2>
+              <form id="smtp-test-form">
+                <div class="field">
+                  <label for="smtp-test-email">Enviar teste para</label>
+                  <input id="smtp-test-email" type="email" maxlength="254">
+                </div>
+                <div class="form-actions">
+                  <button class="button ghost" type="submit">Enviar e-mail de teste</button>
+                </div>
+              </form>
+              <div class="settings-summary" id="smtp-summary"></div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.4/dist/umd/supabase.js" integrity="sha384-7SfFUrg31wOnGWBLLniKFCNmCSguYA5wI1WPDOt7kP/mom4R9/0pwghVEnv0uwYP" crossorigin="anonymous"></script>
     <script src="src/config.js"></script>
-    <script src="src/supabase.js"></script>
     <script src="src/app.js"></script>
   </body>
 </html>

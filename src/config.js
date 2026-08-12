@@ -2,8 +2,6 @@
   "use strict";
 
   window.LabConConfig = {
-    storeKey: "labcon-state-v1",
-    schemaVersion: 1,
     toastDuration: 2600,
     days: ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"],
     reservationDays: ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado"],
@@ -37,10 +35,15 @@
       reservations: []
     },
     permissions: {
-      aluno: ["dashboard", "reservations", "profile"],
-      professor: ["dashboard", "reservations", "profile", "users", "labs", "desks"],
-      tecnico: ["dashboard", "reservations", "profile", "users", "labs", "desks"],
-      administrador: ["dashboard", "reservations", "profile", "users", "labs", "desks"]
+      aluno:         ["dashboard", "reservations", "profile"],
+      professor:     ["dashboard", "reservations", "profile", "users", "labs", "desks"],
+      tecnico:       ["dashboard", "reservations", "profile", "users", "labs", "desks"],
+      administrador: ["dashboard", "reservations", "profile", "users", "labs", "desks", "smtp"]
     }
   };
+
+  // O token CSRF é publicado via <meta> (em vez de <script> inline) para
+  // que a Content-Security-Policy possa recusar script-src 'unsafe-inline'.
+  var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+  window.LabConCsrfToken = csrfMeta ? csrfMeta.getAttribute("content") : "";
 }());

@@ -3,119 +3,30 @@
 
   const cfg = window.LabConConfig;
   const collapsedLabs = new Set();
-
-  const $ = (selector) => document.querySelector(selector);
-
-  function loadLocalState() {
-    const raw = localStorage.getItem(cfg.storeKey);
-    if (!raw) return clone(cfg.emptyState);
-    try {
-      const parsed = JSON.parse(raw);
-      const { _v, ...state } = parsed;
-      return { ...clone(cfg.emptyState), ...state };
-    } catch {
-      return clone(cfg.emptyState);
-    }
-  }
-
-  function clone(value) {
-    return JSON.parse(JSON.stringify(value));
-  }
-
-  async function loadState() {
-    const fallbackState = loadLocalState();
-
-    try {
-      const state = await window.LabConSupabase.loadState(clone(cfg.emptyState));
-      localStorage.setItem(cfg.storeKey, JSON.stringify({ ...state, _v: cfg.schemaVersion }));
-      return state;
-    } catch (error) {
-      console.warn("Não foi possível carregar dados do Supabase. Usando cache local.", error);
-      return fallbackState;
-    }
-  }
+  const $ = (sel) => document.querySelector(sel);
 
   function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#039;"
-    })[char]);
+    return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    })[c]);
   }
 
-  function option(value, label, selectedValue) {
-    return `<option value="${escapeHtml(value)}" ${value === selectedValue ? "selected" : ""}>${escapeHtml(label)}</option>`;
+  function option(value, label, selected) {
+    return `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`;
   }
 
   function sortByName(items) {
     return [...items].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }
 
-  function roleLabel(role) {
-    return {
-      professor: "Professor",
-      aluno: "Aluno",
-      tecnico: "Técnico",
-      administrador: "Administrador"
-    }[role] || role;
-  }
-
-  function getLab(state, id) {
-    return state.labs.find((lab) => lab.id === id);
-  }
-
-  function getDesk(state, id) {
-    return state.desks.find((desk) => desk.id === id);
-  }
-
-  function getUser(state, id) {
-    return state.users.find((user) => user.id === id);
-  }
-
-  function labOptions(state, selectedValue = "all") {
-    return option("all", "Todos os laboratórios", selectedValue) +
-      sortByName(state.labs).map((lab) => option(lab.id, lab.name, selectedValue)).join("");
-  }
-
-  function dayOptions(selectedValue = "all") {
-    return option("all", "Todos os dias", selectedValue) +
-      cfg.days.map((day) => option(day, day, selectedValue)).join("");
-  }
-
-  function visibleDesks(state, labFilter) {
-    return state.desks
-      .filter((desk) => labFilter === "all" || desk.labId === labFilter)
-      .sort((a, b) => {
-        const labA = getLab(state, a.labId)?.name || "";
-        const labB = getLab(state, b.labId)?.name || "";
-        return labA.localeCompare(labB, "pt-BR") || a.name.localeCompare(b.name, "pt-BR");
-      });
-  }
-
-  function visibleLabs(state, labFilter) {
-    return sortByName(state.labs)
-      .filter((lab) => labFilter === "all" || lab.id === labFilter)
-      .filter((lab) => visibleDesks(state, lab.id).length);
-  }
-
-  function occupiedDesks(state, labFilter, dayFilter) {
-    return visibleDesks(state, labFilter)
-      .filter((desk) => reservationsForDesk(state, desk.id, dayFilter).length);
-  }
-
-  function visibleOccupiedLabs(state, labFilter, dayFilter) {
-    return visibleLabs(state, labFilter)
-      .filter((lab) => occupiedDesks(state, lab.id, dayFilter).length);
-  }
+  function getLab(state, id)  { return state.labs.find((l) => l.id === id); }
+  function getUser(state, id) { return state.users.find((u) => u.id === id); }
 
   function labOccupancy(state, labId) {
-    const desks = state.desks.filter((desk) => desk.labId === labId);
+    const desks    = state.desks.filter((d) => d.labId === labId);
     const capacity = desks.length * cfg.reservationDays.length * cfg.reservationSlots.length;
-    const used = state.reservations.filter((reservation) => reservation.labId === labId).length;
-    const percent = capacity ? Math.round((used / capacity) * 100) : 0;
-    return { capacity, used, percent };
+    const used     = state.reservations.filter((r) => r.labId === labId).length;
+    return { capacity, used, percent: capacity ? Math.round((used / capacity) * 100) : 0 };
   }
 
   function occupancyBar(percent) {
@@ -126,37 +37,43 @@
 
   function reservationsForDesk(state, deskId, dayFilter) {
     return state.reservations
-      .filter((reservation) => reservation.deskId === deskId && (dayFilter === "all" || reservation.day === dayFilter))
+      .filter((r) => r.deskId === deskId && (dayFilter === "all" || r.day === dayFilter))
       .sort((a, b) => cfg.days.indexOf(a.day) - cfg.days.indexOf(b.day) || a.start.localeCompare(b.start));
   }
 
-  function insight(state, labFilter, dayFilter) {
-    const desks = visibleDesks(state, labFilter);
-    const occupiedDeskIds = new Set(
-      state.reservations
-        .filter((reservation) => (labFilter === "all" || reservation.labId === labFilter) && (dayFilter === "all" || reservation.day === dayFilter))
-        .map((reservation) => reservation.deskId)
-    );
-    const users = publicUsers(state, labFilter, dayFilter);
-    const labName = labFilter === "all" ? "Todos os laboratórios" : getLab(state, labFilter)?.name || "Laboratório";
-    const dayName = dayFilter === "all" ? "Todos os dias" : dayFilter;
-
-    return {
-      labName,
-      dayName,
-      occupied: desks.filter((desk) => occupiedDeskIds.has(desk.id)).length,
-      free: desks.filter((desk) => !occupiedDeskIds.has(desk.id)).length,
-      users: users.length
-    };
+  function visibleDesks(state, labFilter) {
+    return state.desks
+      .filter((d) => labFilter === "all" || d.labId === labFilter)
+      .sort((a, b) => {
+        const lA = getLab(state, a.labId)?.name || "";
+        const lB = getLab(state, b.labId)?.name || "";
+        return lA.localeCompare(lB, "pt-BR") || a.name.localeCompare(b.name, "pt-BR");
+      });
   }
 
-  function publicUsers(state, labFilter, dayFilter = "all") {
-    const userIds = new Set(
+  function visibleLabs(state, labFilter) {
+    return sortByName(state.labs)
+      .filter((l) => labFilter === "all" || l.id === labFilter)
+      .filter((l) => visibleDesks(state, l.id).length);
+  }
+
+  function occupiedDesks(state, labFilter, dayFilter) {
+    return visibleDesks(state, labFilter)
+      .filter((d) => reservationsForDesk(state, d.id, dayFilter).length);
+  }
+
+  function visibleOccupiedLabs(state, labFilter, dayFilter) {
+    return visibleLabs(state, labFilter)
+      .filter((l) => occupiedDesks(state, l.id, dayFilter).length);
+  }
+
+  function publicUsers(state, labFilter, dayFilter) {
+    const ids = new Set(
       state.reservations
-        .filter((reservation) => (labFilter === "all" || reservation.labId === labFilter) && (dayFilter === "all" || reservation.day === dayFilter))
-        .map((reservation) => reservation.userId)
+        .filter((r) => (labFilter === "all" || r.labId === labFilter) && (dayFilter === "all" || r.day === dayFilter))
+        .map((r) => r.userId)
     );
-    return sortByName(state.users.filter((user) => userIds.has(user.id)));
+    return sortByName(state.users.filter((u) => ids.has(u.id)));
   }
 
   function empty(message) {
@@ -164,14 +81,22 @@
   }
 
   function renderMetrics(state) {
-    $("#metric-labs").textContent = state.labs.length;
-    $("#metric-desks").textContent = state.desks.length;
-    $("#metric-users").textContent = state.users.length;
+    $("#metric-labs").textContent         = state.labs.length;
+    $("#metric-desks").textContent        = state.desks.length;
+    $("#metric-users").textContent        = state.users.length;
     $("#metric-reservations").textContent = state.reservations.length;
   }
 
   function renderInsight(state, labFilter, dayFilter) {
-    const data = insight(state, labFilter, dayFilter);
+    const desks    = visibleDesks(state, labFilter);
+    const occupied = new Set(
+      state.reservations
+        .filter((r) => (labFilter === "all" || r.labId === labFilter) && (dayFilter === "all" || r.day === dayFilter))
+        .map((r) => r.deskId)
+    );
+    const labName = labFilter === "all" ? "Todos os laboratórios" : getLab(state, labFilter)?.name || "Laboratório";
+    const dayName = dayFilter === "all" ? "Todos os dias" : dayFilter;
+
     $("#public-insight").innerHTML = `
       <div class="info-chip">
         <label for="public-lab-filter">Laboratório</label>
@@ -181,9 +106,35 @@
         <label for="dashboard-day-filter">Período</label>
         <select id="dashboard-day-filter" aria-label="Filtrar dia no painel"></select>
       </div>
-      <div class="info-chip"><span>Mesas ocupadas</span><strong>${data.occupied}</strong></div>
-      <div class="info-chip"><span>Mesas livres</span><strong>${data.free}</strong></div>
+      <div class="info-chip"><span>Mesas ocupadas</span><strong>${desks.filter((d) => occupied.has(d.id)).length}</strong></div>
+      <div class="info-chip"><span>Mesas livres</span><strong>${desks.filter((d) => !occupied.has(d.id)).length}</strong></div>
     `;
+  }
+
+  function deskUserSchedule(state, reservations) {
+    const grouped = reservations.reduce((acc, r) => {
+      if (!acc[r.userId]) acc[r.userId] = [];
+      acc[r.userId].push(r);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([userId, items]) => {
+      const user  = getUser(state, userId);
+      const byDay = items.reduce((acc, r) => {
+        if (!acc[r.day]) { acc[r.day] = { day: r.day, start: r.start, end: r.end }; return acc; }
+        if (r.start < acc[r.day].start) acc[r.day].start = r.start;
+        if (r.end   > acc[r.day].end)   acc[r.day].end   = r.end;
+        return acc;
+      }, {});
+      const schedule = Object.values(byDay)
+        .sort((a, b) => cfg.days.indexOf(a.day) - cfg.days.indexOf(b.day))
+        .map((r) => `<span>${escapeHtml(r.day)} | ${escapeHtml(r.start)} às ${escapeHtml(r.end)}</span>`)
+        .join("");
+      return `<article class="desk-user-card">
+        <strong>${escapeHtml(user?.name || "Usuário removido")}</strong>
+        <div class="desk-user-schedule">${schedule}</div>
+      </article>`;
+    }).join("");
   }
 
   function renderBoard(state, labFilter, dayFilter) {
@@ -193,64 +144,21 @@
       return;
     }
 
-    const userSchedule = (reservations) => {
-      const grouped = reservations.reduce((acc, reservation) => {
-        const userId = reservation.userId;
-        if (!acc[userId]) acc[userId] = [];
-        acc[userId].push(reservation);
-        return acc;
-      }, {});
-
-      return Object.entries(grouped).map(([userId, items]) => {
-        const user = getUser(state, userId);
-        const byDay = items.reduce((acc, reservation) => {
-          if (!acc[reservation.day]) {
-            acc[reservation.day] = {
-              day: reservation.day,
-              start: reservation.start,
-              end: reservation.end
-            };
-            return acc;
-          }
-
-          if (reservation.start < acc[reservation.day].start) acc[reservation.day].start = reservation.start;
-          if (reservation.end > acc[reservation.day].end) acc[reservation.day].end = reservation.end;
-          return acc;
-        }, {});
-        const schedule = Object.values(byDay)
-          .sort((a, b) => cfg.days.indexOf(a.day) - cfg.days.indexOf(b.day))
-          .map((reservation) => `<span>${escapeHtml(reservation.day)} | ${escapeHtml(reservation.start)} às ${escapeHtml(reservation.end)}</span>`)
-          .join("");
-
-        return `<article class="desk-user-card">
-          <strong>${escapeHtml(user?.name || "Usuário removido")}</strong>
-          <div class="desk-user-schedule">${schedule}</div>
-        </article>`;
-      }).join("");
-    };
-
     const deskCard = (desk) => {
       const reservations = reservationsForDesk(state, desk.id, dayFilter);
-      const status = reservations.length ? "Ocupada" : "Livre";
-      const reservationHtml = reservations.length
-        ? userSchedule(reservations)
-        : empty("Sem reserva no período.");
-
       return `<article class="desk-card">
         <header>
-          <div>
-            <div class="desk-name">${escapeHtml(desk.name)}</div>
-          </div>
+          <div><div class="desk-name">${escapeHtml(desk.name)}</div></div>
           <div class="desk-badges">
-            <span class="status-chip ${reservations.length ? "busy" : "free"}">${status}</span>
+            <span class="status-chip ${reservations.length ? "busy" : "free"}">${reservations.length ? "Ocupada" : "Livre"}</span>
           </div>
         </header>
-        ${reservationHtml}
+        ${reservations.length ? deskUserSchedule(state, reservations) : empty("Sem reserva no período.")}
       </article>`;
     };
 
     $("#public-board").innerHTML = visibleOccupiedLabs(state, labFilter, dayFilter).map((lab) => {
-      const labDesks = occupiedDesks(state, lab.id, dayFilter);
+      const labDesks  = occupiedDesks(state, lab.id, dayFilter);
       const occupancy = labOccupancy(state, lab.id);
       const collapsed = collapsedLabs.has(lab.id);
       return `<section class="lab-section lab-card ${collapsed ? "collapsed" : ""}" data-lab-section="${escapeHtml(lab.id)}">
@@ -263,7 +171,8 @@
             <strong>${occupancy.percent}% ocupado</strong>
             <span>${labDesks.length} mesa(s) ocupada(s)</span>
             ${occupancyBar(occupancy.percent)}
-            <button class="button ghost lab-toggle" type="button" data-toggle-lab="${escapeHtml(lab.id)}" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "Expandir" : "Contrair"} ${escapeHtml(lab.name)}">
+            <button class="button ghost lab-toggle" type="button" data-toggle-lab="${escapeHtml(lab.id)}"
+              aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "Expandir" : "Contrair"} ${escapeHtml(lab.name)}">
               ${collapsed ? "Expandir" : "Contrair"}
             </button>
           </div>
@@ -275,28 +184,14 @@
     }).join("");
   }
 
-  async function render() {
-    const state = await loadState();
-    const labFilter = $("#public-lab-filter")?.value || "all";
-    const dayFilter = $("#dashboard-day-filter")?.value || "all";
-
-    renderInsight(state, labFilter, dayFilter);
-    $("#public-lab-filter").innerHTML = labOptions(state, labFilter);
-    $("#dashboard-day-filter").innerHTML = dayOptions(dayFilter);
-    renderMetrics(state);
-    renderBoard(state, labFilter, dayFilter);
-    applyDynamicStyles();
-  }
-
   function applyDynamicStyles() {
-    Array.from(document.querySelectorAll("[data-occupancy-width]")).forEach((element) => {
-      const width = Number(element.dataset.occupancyWidth);
-      element.style.width = `${Math.max(0, Math.min(width, 100))}%`;
+    document.querySelectorAll("[data-occupancy-width]").forEach((el) => {
+      el.style.width = `${Math.max(0, Math.min(Number(el.dataset.occupancyWidth), 100))}%`;
     });
   }
 
   function applyLabVisibility(section, button, collapsed) {
-    const grid = section.querySelector(".lab-desk-grid");
+    const grid    = section.querySelector(".lab-desk-grid");
     const labName = section.querySelector("h3")?.textContent || "Laboratório";
     section.classList.toggle("collapsed", collapsed);
     grid.hidden = collapsed;
@@ -305,18 +200,47 @@
     button.textContent = collapsed ? "Expandir" : "Contrair";
   }
 
-  document.addEventListener("change", (event) => {
-    if (!event.target.matches("#public-lab-filter, #dashboard-day-filter")) return;
-    render();
+  async function render() {
+    let state;
+    try {
+      const res = await fetch("api/state.php");
+      state     = await res.json();
+    } catch {
+      state = { users: [], labs: [], desks: [], reservations: [] };
+    }
+
+    const labFilter = $("#public-lab-filter")?.value || "all";
+    const dayFilter = $("#dashboard-day-filter")?.value || "all";
+
+    renderInsight(state, labFilter, dayFilter);
+
+    const labSel = $("#public-lab-filter");
+    const daySel = $("#dashboard-day-filter");
+    if (labSel) {
+      labSel.innerHTML = option("all", "Todos os laboratórios", labFilter) +
+        sortByName(state.labs).map((l) => option(l.id, l.name, labFilter)).join("");
+    }
+    if (daySel) {
+      daySel.innerHTML = option("all", "Todos os dias", dayFilter) +
+        cfg.days.map((d) => option(d, d, dayFilter)).join("");
+    }
+
+    renderMetrics(state);
+    renderBoard(state, labFilter, dayFilter);
+    applyDynamicStyles();
+  }
+
+  document.addEventListener("change", (e) => {
+    if (e.target.matches("#public-lab-filter, #dashboard-day-filter")) render();
   });
-  document.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-toggle-lab]");
-    if (!button) return;
-    const labId = button.dataset.toggleLab;
-    const collapsed = !collapsedLabs.has(labId);
-    if (collapsed) collapsedLabs.add(labId);
-    else collapsedLabs.delete(labId);
-    applyLabVisibility(button.closest("[data-lab-section]"), button, collapsed);
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-toggle-lab]");
+    if (!btn) return;
+    const id       = btn.dataset.toggleLab;
+    const collapsed = !collapsedLabs.has(id);
+    if (collapsed) collapsedLabs.add(id); else collapsedLabs.delete(id);
+    applyLabVisibility(btn.closest("[data-lab-section]"), btn, collapsed);
   });
+
   render();
 }());

@@ -3,24 +3,22 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://awoyslrpmbygibyvjnpb.supabase.co; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
     <meta name="referrer" content="no-referrer">
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
     <title>LabCon | Painel Público</title>
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
     <link rel="stylesheet" href="assets/css/styles.css">
   </head>
   <body>
     <main class="public-page">
       <header class="public-topbar">
         <div class="brand public-brand">
-          <span class="brand-mark">LC</span>
+          <img class="brand-logo" src="assets/img/labcontrol-logo.png" alt="LabControl">
           <div>
-            <strong>LabCon</strong>
             <small>Painel público de laboratórios</small>
           </div>
         </div>
-        <a class="button primary login-button" href="login.html">Entrar no sistema</a>
+        <a class="button primary login-button" href="login.php">Entrar no sistema</a>
       </header>
 
       <section class="public-hero" aria-labelledby="view-title">
@@ -59,9 +57,7 @@
       </section>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.4/dist/umd/supabase.js" integrity="sha384-7SfFUrg31wOnGWBLLniKFCNmCSguYA5wI1WPDOt7kP/mom4R9/0pwghVEnv0uwYP" crossorigin="anonymous"></script>
     <script src="src/config.js"></script>
-    <script src="src/supabase.js"></script>
     <script src="src/public.js"></script>
   </body>
 </html>

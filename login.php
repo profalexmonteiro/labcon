@@ -1,22 +1,26 @@
+<?php
+require_once __DIR__ . '/app/bootstrap.php';
+start_session();
+$_csrf = csrf_token();
+?>
 <!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://awoyslrpmbygibyvjnpb.supabase.co; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
     <meta name="referrer" content="no-referrer">
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
+    <meta name="csrf-token" content="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
     <title>LabCon | Login</title>
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
     <link rel="stylesheet" href="assets/css/styles.css">
   </head>
   <body>
     <main class="auth-page">
       <section class="auth-panel" aria-labelledby="auth-title">
         <div class="brand auth-brand">
-          <span class="brand-mark">LC</span>
+          <img class="brand-logo" src="assets/img/labcontrol-logo.png" alt="LabControl">
           <div>
-            <strong>LabCon</strong>
             <small>Acesso ao sistema</small>
           </div>
         </div>
@@ -56,15 +60,8 @@
             <label for="register-email">E-mail institucional</label>
             <input id="register-email" type="email" required autocomplete="email" maxlength="254">
           </div>
+          <p class="field-hint">O auto-cadastro é destinado a alunos. Contas de professor ou técnico são criadas por um administrador.</p>
           <div class="field">
-            <label for="register-role">Perfil</label>
-            <select id="register-role" required>
-              <option value="aluno">Aluno</option>
-              <option value="professor">Professor</option>
-              <option value="tecnico">Técnico</option>
-            </select>
-          </div>
-          <div class="field register-student-only">
             <label for="register-level">Nível</label>
             <select id="register-level">
               <option value="graduacao">Graduação</option>
@@ -122,15 +119,13 @@
         </form>
 
         <div class="auth-footer">
-          <a href="index.html">Voltar ao painel público</a>
+          <a href="index.php">Voltar ao painel público</a>
         </div>
       </section>
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.4/dist/umd/supabase.js" integrity="sha384-7SfFUrg31wOnGWBLLniKFCNmCSguYA5wI1WPDOt7kP/mom4R9/0pwghVEnv0uwYP" crossorigin="anonymous"></script>
     <script src="src/config.js"></script>
-    <script src="src/supabase.js"></script>
     <script src="src/login.js"></script>
   </body>
 </html>

@@ -1,0 +1,37 @@
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /labcon/
+
+# Deny direct access to internal application code and data — only the
+# files in the project root and in api/ are meant to be served directly.
+RewriteRule ^(includes|app|database)(/|$) - [F,L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+# Deny access to dotfiles (.htaccess, .labcon_setup, .git, .env, etc.) no
+# matter which directory they live in.
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Baseline security headers. Sent as real HTTP headers because several of
+# these (X-Content-Type-Options, X-Frame-Options, Permissions-Policy) are
+# NOT honored by browsers when set via <meta http-equiv>, only via headers.
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "no-referrer"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
+    Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains" env=HTTPS
+</IfModule>

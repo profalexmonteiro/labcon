@@ -1,214 +1,167 @@
 (function () {
   "use strict";
 
-  const cfg = window.LabConConfig;
-  const tabs = Array.from(document.querySelectorAll("[data-auth-view]"));
+  const cfg  = window.LabConConfig;
+  function csrfHeaders() {
+    return { "Content-Type": "application/json", "X-CSRF-Token": window.LabConCsrfToken || "" };
+  }
+  const tabs   = Array.from(document.querySelectorAll("[data-auth-view]"));
   const panels = Array.from(document.querySelectorAll("[data-auth-panel]"));
-  const toast = document.querySelector("#toast");
+  const toast  = document.querySelector("#toast");
   let professors = [];
 
   function showPanel(view) {
-    tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.authView === view));
-    panels.forEach((panel) => panel.classList.toggle("active", panel.dataset.authPanel === view));
+    tabs.forEach((t)   => t.classList.toggle("active", t.dataset.authView   === view));
+    panels.forEach((p) => p.classList.toggle("active", p.dataset.authPanel  === view));
   }
 
   function showToast(message) {
     toast.textContent = message;
     toast.classList.add("show");
-    window.clearTimeout(showToast.timer);
-    showToast.timer = window.setTimeout(() => toast.classList.remove("show"), cfg.toastDuration);
+    window.clearTimeout(showToast._timer);
+    showToast._timer = window.setTimeout(() => toast.classList.remove("show"), cfg.toastDuration);
   }
 
   function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#039;"
-    })[char]);
+    return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    })[c]);
   }
 
-  function option(value, label) {
-    return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
-  }
+  function selectedLevel() { return document.querySelector("#register-level").value; }
 
-  function sortByName(items) {
-    return [...items].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  }
-
-  function selectedRegisterRole() {
-    return document.querySelector("#register-role").value;
-  }
-
-  function selectedRegisterLevel() {
-    return document.querySelector("#register-level").value;
-  }
-
-  function fillRegisterCourses() {
-    const selectedValue = document.querySelector("#register-course").value;
-    document.querySelector("#register-course").innerHTML = cfg.courses
-      .map((course) => `<option value="${escapeHtml(course)}" ${course === selectedValue ? "selected" : ""}>${escapeHtml(course)}</option>`)
+  function fillCourses() {
+    const select = document.querySelector("#register-course");
+    if (!select) return;
+    const current = select.value;
+    select.innerHTML = cfg.courses
+      .map((c) => `<option value="${escapeHtml(c)}" ${c === current ? "selected" : ""}>${escapeHtml(c)}</option>`)
       .join("");
   }
 
-  function updateRegisterFields() {
-    const advisorSelect = document.querySelector("#register-advisor");
-    const isStudent = selectedRegisterRole() === "aluno";
-    const isPostgrad = selectedRegisterLevel() === "pos-graduacao";
-    if (!advisorSelect) return;
+  function updateStudentFields() {
+    const isPostgrad = selectedLevel() === "pos-graduacao";
 
-    document.querySelectorAll(".register-student-only")
-      .forEach((field) => field.classList.toggle("hidden", !isStudent));
-    document.querySelector("#register-undergrad-fields").classList.toggle("hidden", !isStudent || isPostgrad);
-    document.querySelector("#register-postgrad-fields").classList.toggle("hidden", !isStudent || !isPostgrad);
-    advisorSelect.required = isStudent;
-    document.querySelector("#register-level").required = isStudent;
-    document.querySelector("#register-course").required = isStudent && !isPostgrad;
-    document.querySelector("#register-program").required = isStudent && !isPostgrad;
-    document.querySelector("#register-postgrad-type").required = isStudent && isPostgrad;
-    if (!isStudent) advisorSelect.value = "";
-  }
-
-  function loadLocalState() {
-    const raw = localStorage.getItem(cfg.storeKey);
-    if (!raw) return { ...cfg.emptyState };
-    try {
-      const parsed = JSON.parse(raw);
-      const { _v, ...state } = parsed;
-      return { ...cfg.emptyState, ...state };
-    } catch {
-      return { ...cfg.emptyState };
-    }
+    document.querySelector("#register-undergrad-fields").classList.toggle("hidden", isPostgrad);
+    document.querySelector("#register-postgrad-fields").classList.toggle("hidden", !isPostgrad);
   }
 
   async function loadProfessors() {
     const select = document.querySelector("#register-advisor");
     if (!select) return;
-
-    select.innerHTML = option("", "Carregando professores...");
-    select.disabled = true;
+    select.innerHTML = `<option value="">Carregando...</option>`;
+    select.disabled  = true;
 
     try {
-      const fallbackState = loadLocalState();
-      const state = await window.LabConSupabase.loadState(fallbackState);
-      localStorage.setItem(cfg.storeKey, JSON.stringify({ ...state, _v: cfg.schemaVersion }));
-      professors = sortByName(state.users.filter((user) => user.role === "professor"));
-    } catch (error) {
-      console.warn("Não foi possível carregar professores do Supabase. Usando cache local.", error);
-      professors = sortByName(loadLocalState().users.filter((user) => user.role === "professor"));
+      const res   = await fetch("api/state.php");
+      const state = await res.json();
+      professors  = [...state.users]
+        .filter((u) => u.role === "professor")
+        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    } catch {
+      professors = [];
     }
 
     select.disabled = false;
     select.innerHTML = professors.length
-      ? option("", "Selecione") + professors.map((professor) => option(professor.id, professor.name)).join("")
-      : option("", "Cadastre um professor na área administrativa");
+      ? `<option value="">Selecione</option>` + professors.map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join("")
+      : `<option value="">Nenhum professor cadastrado</option>`;
   }
 
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", () => showPanel(tab.dataset.authView));
-  });
+  tabs.forEach((tab) => tab.addEventListener("click", () => {
+    showPanel(tab.dataset.authView);
+    if (tab.dataset.authView === "register") loadProfessors();
+  }));
 
-  document.querySelector("#register-role").addEventListener("change", updateRegisterFields);
-  document.querySelector("#register-level").addEventListener("change", updateRegisterFields);
+  document.querySelector("#register-level").addEventListener("change", updateStudentFields);
 
-  function authClient() {
-    if (!window.LabConSupabase?.client) {
-      showToast("Cliente Supabase indisponivel.");
-      return null;
-    }
-    return window.LabConSupabase.client.auth;
-  }
-
+  // Login
   document.querySelector("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const auth = authClient();
-    if (!auth) return;
-    const email = document.querySelector("#login-email").value.trim();
+    const email    = document.querySelector("#login-email").value.trim();
     const password = document.querySelector("#login-password").value;
-    const { error } = await auth.signInWithPassword({ email, password });
 
-    if (error) {
-      showToast("Não foi possível entrar. Verifique e-mail e senha.");
-      return;
+    try {
+      const res    = await fetch("api/auth.php", {
+        method: "POST",
+        headers: csrfHeaders(),
+        body: JSON.stringify({ action: "login", email, password })
+      });
+      const result = await res.json();
+      if (!result.success) { showToast(result.error || "Não foi possível entrar."); return; }
+      window.location.href = "admin.php";
+    } catch {
+      showToast("Erro de conexão.");
     }
-
-    localStorage.removeItem("labcon-session-role");
-    window.location.href = "admin.html";
   });
 
+  // Registro
   document.querySelector("#register-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const auth = authClient();
-    if (!auth) return;
-    const form = event.currentTarget;
-    const name = document.querySelector("#register-name").value.trim();
-    const email = document.querySelector("#register-email").value.trim();
-    const role = selectedRegisterRole();
-    const advisorId = document.querySelector("#register-advisor").value;
-    const advisor = professors.find((professor) => professor.id === advisorId);
-    const password = document.querySelector("#register-password").value;
-    const metadata = { name, role };
+    const level = selectedLevel();
 
-    if (role === "aluno" && !advisor) {
-      showToast("Selecione um professor orientador.");
-      return;
-    }
+    const advisorEl = document.querySelector("#register-advisor");
+    const advisor   = professors.find((p) => p.id === advisorEl.value);
+    if (!advisor) { showToast("Selecione um professor orientador."); return; }
 
-    if (role === "aluno") {
-      const level = selectedRegisterLevel();
-      metadata.level = level;
-      metadata.advisorId = advisor.id;
-      metadata.advisorName = advisor.name;
-      metadata.researchProject = document.querySelector("#register-research-project").value.trim();
-      if (level === "graduacao") {
-        metadata.course = document.querySelector("#register-course").value;
-        metadata.program = document.querySelector("#register-program").value;
-      } else {
-        metadata.postgradType = document.querySelector("#register-postgrad-type").value;
-      }
-    }
+    const body = {
+      action:   "register",
+      name:     document.querySelector("#register-name").value.trim(),
+      email:    document.querySelector("#register-email").value.trim(),
+      password: document.querySelector("#register-password").value,
+      level,
+      advisorId:   advisor.id,
+      advisorName: advisor.name,
+      researchProject: document.querySelector("#register-research-project").value.trim()
+    };
 
-    const { data, error } = await auth.signUp({
-      email,
-      password,
-      options: { data: metadata }
-    });
-
-    if (error) {
-      showToast("Não foi possível criar o cadastro.");
-      return;
+    if (level === "graduacao") {
+      body.course   = document.querySelector("#register-course").value;
+      body.program  = document.querySelector("#register-program").value;
+    } else {
+      body.postgradType = document.querySelector("#register-postgrad-type").value;
     }
 
     try {
-      await window.LabConSupabase.upsertUserFromAuth(data.user);
-    } catch (syncError) {
-      console.warn("Cadastro criado no Auth; sincronização direta com labcon_state ficou para o trigger do Supabase.", syncError);
+      const res    = await fetch("api/auth.php", {
+        method: "POST",
+        headers: csrfHeaders(),
+        body: JSON.stringify(body)
+      });
+      const result = await res.json();
+      if (!result.success) { showToast(result.error || "Não foi possível criar o cadastro."); return; }
+      window.location.href = "admin.php";
+    } catch {
+      showToast("Erro de conexão.");
     }
-
-    showToast("Cadastro criado. Verifique seu e-mail se a confirmação estiver ativa.");
-    form.reset();
-    updateRegisterFields();
   });
 
+  // Recuperar senha
   document.querySelector("#recover-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const auth = authClient();
-    if (!auth) return;
     const email = document.querySelector("#recover-email").value.trim();
-    const redirectTo = new URL("login.html", window.location.href).toString();
-    const { error } = await auth.resetPasswordForEmail(email, { redirectTo });
 
-    if (error) {
-      showToast("Não foi possível enviar a recuperação.");
-      return;
+    try {
+      const res = await fetch("api/auth.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "requestPasswordReset", email })
+      });
+      const result = await res.json();
+      if (!result.success) { showToast(result.error || "Nao foi possivel enviar a recuperacao."); return; }
+      showToast("Se o e-mail existir, enviaremos as instrucoes de recuperacao.");
+      document.querySelector("#recover-form").reset();
+    } catch {
+      showToast("Erro de conexao.");
     }
-
-    showToast("Instruções de recuperação enviadas por e-mail.");
-    event.currentTarget.reset();
   });
 
-  loadProfessors();
-  fillRegisterCourses();
-  updateRegisterFields();
+  // Se já logado, redireciona
+  fetch("api/auth.php")
+    .then((r) => r.json())
+    .then((s) => { if (s.authenticated) window.location.href = "admin.php"; })
+    .catch(() => {});
+
+  fillCourses();
+  updateStudentFields();
 }());
